@@ -53,6 +53,12 @@ The React application lives in `web/src/`.
 
 Vite treats `web/` as its source root and writes the production bundle to `web/dist/`, which FastAPI serves.
 
+### Frontend refresh and chart state
+
+`useDashboard.ts` treats each valid SSE snapshot as the live refresh signal. It applies the snapshot immediately and concurrently refreshes the selected history and comparison summaries, Command Center response, raw sensors, and events. The same coordinator runs every 60 seconds as a fallback when SSE delivery is delayed or disconnected. Request revisions prevent an older history response from replacing a newer selection.
+
+ECharts updates within the same range replace series data without replacing the chart's `dataZoom` component. This preserves a user's zoom window as new points arrive. Power Trends is keyed by its quick range, while History, Solar, Battery, and Grid charts are keyed by period and anchor date; changing one of those controls intentionally creates a fresh full-range chart.
+
 ## Data lifecycle
 
 1. Configuration optionally supplies an inverter address.
@@ -64,6 +70,7 @@ Vite treats `web/` as its source root and writes the production bundle to `web/d
 7. Live grid observations pass through a 30-second outage debounce; missing polls are not interpreted as outages.
 8. When configured, the weather adapter refreshes independently every three hours and retains the last successful run.
 9. `CommandCenterAnalytics` combines current state and retained facts into readiness-explicit API groups.
+10. The browser uses each snapshot broadcast to refresh all dependent read models together; a 60-second timer provides a fallback cycle.
 
 ## Invariants
 
@@ -75,7 +82,11 @@ Vite treats `web/` as its source root and writes the production bundle to `web/d
 - React never reimplements command-center formulas or substitutes zero for unavailable facts.
 - Forecast failures cannot stop or delay inverter collection.
 - SQLite migrations are versioned and preserve a one-time pre-migration backup.
+- A visible live refresh must update every dependent frontend dataset, not only snapshot cards.
+- Same-context chart refreshes must preserve user-controlled zoom; explicit range, period, or date changes reset it.
 
 ## Extension points
 
 When adding inverter support, prefer extending normalization and fixtures without leaking model-specific fields into routes or UI components. When adding a new API concept, define its model first, add persistence only when required, and keep transport details in `api.ts` on the frontend.
+
+Refresh changes belong in `useDashboard.ts` so the header countdown and dependent datasets cannot drift onto separate clocks. Chart update changes belong in `DashboardComponents.tsx`; retain the same-context zoom regression in `chartRefresh.test.ts` and reset chart state explicitly through range/period/anchor keys.

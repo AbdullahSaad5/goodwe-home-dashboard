@@ -26,7 +26,8 @@ It is read-only by design. The dashboard never changes inverter settings, operat
 - Local event history, searchable raw sensors, and CSV export
 - Responsive desktop, tablet, and mobile interface
 - SQLite history with no external database or cloud dependency
-- Server-Sent Events for live updates without page refreshes
+- Coordinated Server-Sent Events keep live cards, charts, summaries, sensors, and events in sync
+- Interactive chart zoom is preserved while refreshed points arrive
 - Operational 15-minute to 24-hour trends with outage shading and table mode
 - Optional calibrated solar forecast, learned load profile, and 24-hour SOC projection
 - Debounced outage history, timestamped daily peaks, records, and advisory watchdogs
@@ -147,6 +148,12 @@ History, summary, and export requests accept `period=day|week|month|year` and an
 Command Center accepts `range=15m|1h|3h|6h|12h|24h` and `history=14d|30d|60d|12m`. CSV export accepts `dataset=telemetry|daily`; telemetry remains the default.
 
 Battery power is positive while discharging and negative while charging. Grid power is positive while exporting and negative while importing.
+
+## Live refresh behavior
+
+The collector broadcasts each new inverter snapshot over Server-Sent Events. The interface applies the snapshot immediately, then refreshes Power Trends, calendar history, summaries, raw sensors, events, and Command Center intelligence as one coordinated cycle. A 60-second fallback refresh keeps those datasets current if the live stream is temporarily interrupted.
+
+Refreshing data does not reset an active chart zoom. Changing a trend range, history period, or anchor date intentionally opens the new selection at its full extent.
 
 ## Architecture
 

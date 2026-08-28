@@ -49,6 +49,8 @@ make build
 
 Add focused tests for new behavior and regressions. Avoid unrelated formatting or refactors in a feature pull request.
 
+For live-data changes, test the complete refresh boundary in `useDashboard.test.tsx` rather than only an individual API call. For ECharts changes, verify both incoming-series updates and user-controlled state such as zoom in `chartRefresh.test.ts`. A normal data refresh must preserve zoom; an intentional range, period, or date change may reset it.
+
 ## Pull requests
 
 1. Create a focused branch from `main`.

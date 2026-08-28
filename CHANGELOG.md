@@ -19,6 +19,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - Separated the Python service into `server/` and the React application into `web/`.
 - Isolated inverter discovery behind a dedicated backend module.
+- Improved the responsive dashboard and connecting experience while retaining the GoodWe Home product name and existing light visual system.
+- Reworked Event history into compact diagnostic rows with plain-language fault, connectivity, discovery, and collector explanations.
+
+### Fixed
+
+- Synchronized Power Trends, calendar charts, summaries, sensors, events, and Command Center intelligence with each live snapshot, with a coordinated 60-second fallback refresh.
+- Preserved ECharts zoom windows when refreshed points arrive while still resetting charts for intentional range, period, or anchor-date changes.
+- Exposed stored inverter fault details and meanings instead of internal event keys and generic error messages.
+- Prevented the initial connecting experience from remaining stuck when collector data becomes available.
 
 ## 1.0.0 - 2026-08-28
 
