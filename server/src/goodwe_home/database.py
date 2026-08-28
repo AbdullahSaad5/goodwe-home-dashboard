@@ -675,7 +675,14 @@ class DashboardDatabase:
             params = (start.timestamp(), now.timestamp())
         with self._lock:
             rows = self._connection.execute(query, params).fetchall()
-            if not rows and resolution == "1m":
+            if rows and resolution == "1m":
+                rows = self._merge_live_aggregate_tail(
+                    rows,
+                    start_ts=start.timestamp(),
+                    end_ts=now.timestamp(),
+                    bucket_seconds=60,
+                )
+            elif not rows and resolution == "1m":
                 rows = self._connection.execute(
                     """
                     SELECT collected_ts AS timestamp, pv_w, home_w, grid_w, battery_w,
@@ -707,6 +714,36 @@ class DashboardDatabase:
                 for row in rows
             ],
         )
+
+    def _merge_live_aggregate_tail(
+        self,
+        rows: list[sqlite3.Row],
+        *,
+        start_ts: float,
+        end_ts: float,
+        bucket_seconds: int,
+    ) -> list[sqlite3.Row]:
+        """Replace the final rollup bucket and append newer retained samples."""
+        tail_start = max(start_ts, float(rows[-1]["timestamp"]))
+        tail_rows = self._connection.execute(
+            """
+            SELECT CAST(collected_ts / ? AS INTEGER) * ? AS timestamp,
+                   AVG(pv_w) AS pv_w, AVG(home_w) AS home_w,
+                   AVG(grid_w) AS grid_w, AVG(battery_w) AS battery_w,
+                   AVG(backup_w) AS backup_w,
+                   AVG(battery_soc_pct) AS battery_soc_pct,
+                   AVG(grid_voltage_v) AS grid_voltage_v,
+                   AVG(grid_frequency_hz) AS grid_frequency_hz,
+                   AVG(inverter_temperature_c) AS inverter_temperature_c
+            FROM samples WHERE collected_ts >= ? AND collected_ts < ?
+            GROUP BY CAST(collected_ts / ? AS INTEGER)
+            ORDER BY timestamp
+            """,
+            (bucket_seconds, bucket_seconds, tail_start, end_ts, bucket_seconds),
+        ).fetchall()
+        points_by_timestamp = {int(row["timestamp"]): row for row in rows}
+        points_by_timestamp.update({int(row["timestamp"]): row for row in tail_rows})
+        return [points_by_timestamp[key] for key in sorted(points_by_timestamp)]
 
     def daily_history(self, days: int, now: datetime) -> list[DailyEnergyPoint]:
         local_today = now.astimezone(self.timezone).date()
@@ -1023,7 +1060,14 @@ class DashboardDatabase:
 
         with self._lock:
             rows = self._connection.execute(query, params).fetchall()
-            if not rows and resolution != "10s":
+            if rows and resolution != "10s":
+                rows = self._merge_live_aggregate_tail(
+                    rows,
+                    start_ts=start.timestamp(),
+                    end_ts=end.timestamp(),
+                    bucket_seconds=60 if resolution == "1m" else 15 * 60,
+                )
+            elif not rows and resolution != "10s":
                 rows = self._connection.execute(
                     """
                     SELECT collected_ts AS timestamp, pv_w, home_w, grid_w, battery_w,

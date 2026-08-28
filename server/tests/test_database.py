@@ -80,6 +80,37 @@ def test_rollup_preserves_aggregates_before_retention(tmp_path) -> None:
     database.close()
 
 
+def test_aggregate_history_merges_live_samples_after_the_latest_hourly_rollup(tmp_path) -> None:
+    database = DashboardDatabase(tmp_path / "dashboard.sqlite3", "Asia/Karachi")
+    hour = datetime(2026, 8, 28, 12, tzinfo=UTC)
+
+    for collected, pv_w in (
+        (hour - timedelta(seconds=55), 1000),
+        (hour - timedelta(seconds=10), 3000),
+    ):
+        raw = raw_sample(ppv=pv_w)
+        database.record_snapshot(normalize_snapshot(raw, collected_at=collected), raw)
+
+    database.rollup_and_retain((hour + timedelta(seconds=10)).timestamp())
+
+    live_at = hour + timedelta(minutes=40)
+    live_raw = raw_sample(ppv=2200)
+    database.record_snapshot(normalize_snapshot(live_raw, collected_at=live_at), live_raw)
+
+    history = database.short_history(24 * 3600, hour + timedelta(minutes=45))
+    calendar_history = database.history("week", date(2026, 8, 28))
+
+    assert history.resolution == "1m"
+    assert history.points[-1].timestamp == live_at
+    assert calendar_history.resolution == "1m"
+    assert calendar_history.points[-1].timestamp == live_at
+    previous_minute = next(
+        point for point in history.points if point.timestamp == hour - timedelta(minutes=1)
+    )
+    assert previous_minute.pv_w == 2000
+    database.close()
+
+
 def test_anchor_uses_reporting_calendar_day(tmp_path) -> None:
     database = DashboardDatabase(tmp_path / "dashboard.sqlite3", "Asia/Karachi")
     before_midnight = datetime(2026, 8, 20, 18, 30, tzinfo=UTC)

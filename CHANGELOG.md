@@ -27,6 +27,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
+- Merged retained live telemetry into aggregate-backed trends so Power Trends and week, month, and year charts advance between hourly rollups and show new outage shading immediately.
 - Initialized header clocks and refresh countdowns at component mount so long-running sessions cannot inherit a stale module-load timestamp.
 - Synchronized Power Trends, calendar charts, summaries, sensors, events, and Command Center intelligence with each live snapshot, with a coordinated 60-second fallback refresh.
 - Preserved ECharts zoom windows when refreshed points arrive while still resetting charts for intentional range, period, or anchor-date changes.

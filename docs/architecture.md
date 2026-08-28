@@ -72,6 +72,7 @@ An inline bootstrap in `web/index.html` resolves the saved appearance or the fir
 4. A validated address is saved for the next launch.
 5. Poll results are normalized, recorded, and broadcast to connected browsers.
 6. SQLite rollups and retention keep recent detail while preserving long-term summaries.
+   Aggregate-backed reads replace the latest partial rollup bucket and append retained live samples, so charts do not pause until the next hourly rollup.
 7. Live grid observations pass through a 30-second outage debounce; missing polls are not interpreted as outages.
 8. When configured, the weather adapter refreshes independently every three hours and retains the last successful run.
 9. `CommandCenterAnalytics` combines current state and retained facts into readiness-explicit API groups.
@@ -88,6 +89,7 @@ An inline bootstrap in `web/index.html` resolves the saved appearance or the fir
 - Forecast failures cannot stop or delay inverter collection.
 - SQLite migrations are versioned and preserve a one-time pre-migration backup.
 - A visible live refresh must update every dependent frontend dataset, not only snapshot cards.
+- Aggregate-backed history must include retained telemetry newer than the latest completed rollup.
 - Same-context chart refreshes must preserve user-controlled zoom; explicit range, period, or date changes reset it.
 - Light and dark modes preserve the same semantic solar, load, battery, grid, warning, and error meanings.
 
