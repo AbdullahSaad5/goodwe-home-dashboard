@@ -193,7 +193,13 @@ export function PowerTrendsPanel({
           </table>
         </div>
       ) : (
-        <EnergyChart points={data.trend.points} outages={data.trend.outages} showSoc height={390} />
+        <EnergyChart
+          key={`power-trends:${range}`}
+          points={data.trend.points}
+          outages={data.trend.outages}
+          showSoc
+          height={390}
+        />
       )}
     </Panel>
   );

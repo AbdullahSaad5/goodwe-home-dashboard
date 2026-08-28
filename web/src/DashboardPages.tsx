@@ -503,7 +503,7 @@ export function HistoryPage({
           </a>
         }
       >
-        <EnergyChart points={points} height={420} />
+        <EnergyChart key={`${period}:${anchor}`} points={points} height={420} />
       </Panel>
       <div className="stat-grid">
         <StatCard
@@ -604,7 +604,7 @@ export function SolarPage({
         />
       </div>
       <Panel title="Solar generation" eyebrow="Selected period" className="feature-panel">
-        <EnergyChart points={points} kind="solar" height={380} />
+        <EnergyChart key={`${period}:${anchor}`} points={points} kind="solar" height={380} />
       </Panel>
       <div className="two-column">
         {[snapshot.solar.mppt1, snapshot.solar.mppt2].map((mppt, index) => (
@@ -667,7 +667,7 @@ export function BatteryPage({
         <StatCard label="Temperature" value={formatNumber(battery.temperature_c)} unit="°C" />
       </div>
       <Panel title="Power and state of charge" eyebrow="Battery history" className="feature-panel">
-        <EnergyChart points={points} kind="battery" height={380} />
+        <EnergyChart key={`${period}:${anchor}`} points={points} kind="battery" height={380} />
       </Panel>
       <div className="two-column">
         <Panel title="Electrical">
@@ -748,7 +748,7 @@ export function GridPage({
         eyebrow="Negative grid power is import"
         className="feature-panel"
       >
-        <EnergyChart points={points} kind="grid" height={380} />
+        <EnergyChart key={`${period}:${anchor}`} points={points} kind="grid" height={380} />
       </Panel>
       <div className="two-column">
         <Panel title="Mains quality">

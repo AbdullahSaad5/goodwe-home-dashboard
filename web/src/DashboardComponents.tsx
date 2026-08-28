@@ -53,6 +53,10 @@ export function animationDuration(reduceMotion: boolean | null, duration: number
   return reduceMotion ? 0 : duration;
 }
 
+export function chartUpdateOptions() {
+  return { notMerge: false, lazyUpdate: true, replaceMerge: ['series'] };
+}
+
 type ParsedReading = { numeric: number; digits: number; forcePlus: boolean; suffix: string };
 
 function parseReading(value: string): ParsedReading | null {
@@ -343,7 +347,7 @@ function EChart({
     };
   }, []);
   useEffect(() => {
-    chartRef.current?.setOption(option, { notMerge: true, lazyUpdate: true });
+    chartRef.current?.setOption(option, chartUpdateOptions());
   }, [option]);
   return <div ref={root} className="chart" style={{ height }} role="img" aria-label={label} />;
 }
