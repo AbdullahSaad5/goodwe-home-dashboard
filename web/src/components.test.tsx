@@ -77,6 +77,7 @@ describe('dashboard interactions', () => {
 
   it('navigates desktop sections and exposes Raw Data in profile overflow', async () => {
     const setPage = vi.fn();
+    const enableNotifications = vi.fn();
     render(
       <TooltipProvider>
         <DesktopHeader
@@ -88,10 +89,25 @@ describe('dashboard interactions', () => {
           wallMode={false}
           onToggleWallMode={vi.fn()}
           notificationStatus="default"
-          onEnableNotifications={vi.fn()}
+          onEnableNotifications={enableNotifications}
         />
       </TooltipProvider>,
     );
+    expect(
+      screen.getAllByRole('button', { name: 'Open alerts and notification settings' }),
+    ).toHaveLength(1);
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Open alerts and notification settings' }),
+    );
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: 'Enable desktop notifications' }),
+    );
+    expect(enableNotifications).toHaveBeenCalledTimes(1);
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Open alerts and notification settings' }),
+    );
+    await userEvent.click(await screen.findByRole('menuitem', { name: /View alerts and events/ }));
+    expect(setPage).toHaveBeenCalledWith('system');
     await userEvent.click(screen.getByRole('button', { name: 'History' }));
     expect(setPage).toHaveBeenCalledWith('history');
     await userEvent.click(screen.getByRole('button', { name: 'Open account and technical menu' }));

@@ -236,6 +236,17 @@ svg {
 .notifications-denied {
   color: #9a6a08;
 }
+.menu-count {
+  min-width: 18px;
+  margin-left: auto;
+  padding: 1px 5px;
+  color: #fff;
+  background: var(--danger);
+  border-radius: 999px;
+  font-size: 8px;
+  line-height: 1.5;
+  text-align: center;
+}
 .refresh-pill {
   height: 31px;
   margin-right: 5px;

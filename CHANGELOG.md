@@ -21,6 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Isolated inverter discovery behind a dedicated backend module.
 - Improved the responsive dashboard and connecting experience while retaining the GoodWe Home product name and existing light visual system.
 - Reworked Event history into compact diagnostic rows with plain-language fault, connectivity, discovery, and collector explanations.
+- Consolidated alerts, event counts, and desktop-notification controls into one header menu.
 
 ### Fixed
 

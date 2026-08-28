@@ -340,41 +340,43 @@ export function DesktopHeader({
           <HeaderClock />
         </div>
         <span className="header-action-divider" aria-hidden="true" />
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="header-icon"
-              onClick={() => setPage('system')}
-              aria-label="Open alerts"
-            >
-              <Bell />
-              <span className="event-count">{eventCount}</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Alerts and events</TooltipContent>
-        </Tooltip>
-        <Tooltip>
-          <TooltipTrigger asChild>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
               size="icon"
               className={`header-icon notifications-${notificationStatus}`}
-              onClick={onEnableNotifications}
-              aria-label="Enable desktop notifications"
+              aria-label="Open alerts and notification settings"
+            >
+              <Bell />
+              <span className="event-count">{eventCount}</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuLabel>Alerts & notifications</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => setPage('system')}>
+              <Bell />
+              View alerts and events
+              <span className="menu-count">{eventCount}</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={onEnableNotifications}
+              disabled={notificationStatus !== 'default'}
             >
               <BellRing />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>
-            {notificationStatus === 'insecure'
-              ? 'Notifications require localhost or HTTPS'
-              : notificationStatus === 'granted'
-                ? 'Desktop notifications enabled'
-                : `Desktop notifications: ${notificationStatus}`}
-          </TooltipContent>
-        </Tooltip>
+              {notificationStatus === 'insecure'
+                ? 'Requires localhost or HTTPS'
+                : notificationStatus === 'granted'
+                  ? 'Desktop notifications enabled'
+                  : notificationStatus === 'denied'
+                    ? 'Desktop notifications blocked'
+                    : notificationStatus === 'unsupported'
+                      ? 'Desktop notifications unavailable'
+                      : 'Enable desktop notifications'}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
