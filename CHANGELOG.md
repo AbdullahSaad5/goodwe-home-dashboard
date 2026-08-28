@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Added
 
+- Extended Overview into a light-theme operational command center with quick trends, table mode, energy mix, projections, history, outages, forecasts, watchdogs, reserve intelligence, records, and timestamped peaks.
+- Added readiness-explicit `GET /api/v1/command-center` and daily CSV export while preserving all existing interfaces.
+- Added versioned SQLite migration, pre-migration backup, retained outage/record/peak summaries, nullable MPPT and battery-temperature history, and 60-day forecast caching.
+- Added opt-in Open-Meteo solar forecasting, learned load profiles, calibrated production, advisory system-health checks, wall mode, and foreground desktop notifications.
 - Contributor guidelines, security policy, issue forms, pull request template, and continuous integration.
 - Python packaging, Ruff, ESLint, Prettier, and shared Makefile commands.
 

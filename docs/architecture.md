@@ -12,7 +12,7 @@ collector ──► normalization ──► SQLite
       │                            │
       └──────── current state ─────┤
                                    ▼
-                           FastAPI + SSE
+                CommandCenterAnalytics + FastAPI + SSE
                                    │
                                    ▼
                             React dashboard
@@ -24,15 +24,17 @@ The browser never talks to the inverter directly. The server exposes no endpoint
 
 The installable Python package lives in `server/src/goodwe_home/`.
 
-| Module             | Responsibility                                                                         |
-| ------------------ | -------------------------------------------------------------------------------------- |
-| `config.py`        | Parses environment configuration and owns filesystem defaults.                         |
-| `discovery.py`     | Finds and validates an inverter without requiring a hard-coded address.                |
-| `collector.py`     | Owns connection lifecycle, polling, retries, persistence, and live subscriptions.      |
-| `normalization.py` | Translates protocol-specific sensor data into the stable application model.            |
-| `models.py`        | Defines API and persistence data contracts.                                            |
-| `database.py`      | Owns the SQLite schema, retention, aggregation, events, and runtime settings.          |
-| `main.py`          | Composes dependencies and exposes the read-only HTTP, CSV, static, and SSE interfaces. |
+| Module             | Responsibility                                                                                  |
+| ------------------ | ----------------------------------------------------------------------------------------------- |
+| `config.py`        | Parses environment configuration and owns filesystem defaults.                                  |
+| `discovery.py`     | Finds and validates an inverter without requiring a hard-coded address.                         |
+| `collector.py`     | Owns connection lifecycle, polling, retries, persistence, and live subscriptions.               |
+| `normalization.py` | Translates protocol-specific sensor data into the stable application model.                     |
+| `models.py`        | Defines API and persistence data contracts.                                                     |
+| `database.py`      | Owns the SQLite schema, retention, aggregation, events, and runtime settings.                   |
+| `analytics.py`     | Owns command-center formulas, readiness gates, records, forecasts, projections, and narratives. |
+| `forecast.py`      | Isolates the optional Open-Meteo adapter and three-hour cache coordinator.                      |
+| `main.py`          | Composes dependencies and exposes the read-only HTTP, CSV, static, and SSE interfaces.          |
 
 Discovery is deliberately hidden behind `discover_inverter(port)`. The collector decides when discovery is needed; discovery decides how the local network is searched.
 
@@ -45,6 +47,7 @@ The React application lives in `web/src/`.
 - `types.ts` mirrors stable API contracts.
 - `DashboardPages.tsx` composes application pages.
 - `DashboardComponents.tsx` contains dashboard-specific presentation components.
+- `CommandCenterComponents.tsx` renders presentation-ready command-center groups without duplicating analytics.
 - `components/ui/` contains reusable interface primitives.
 - `format.ts`, `period.ts`, and `ui.ts` contain testable presentation logic.
 
@@ -58,6 +61,9 @@ Vite treats `web/` as its source root and writes the production bundle to `web/d
 4. A validated address is saved for the next launch.
 5. Poll results are normalized, recorded, and broadcast to connected browsers.
 6. SQLite rollups and retention keep recent detail while preserving long-term summaries.
+7. Live grid observations pass through a 30-second outage debounce; missing polls are not interpreted as outages.
+8. When configured, the weather adapter refreshes independently every three hours and retains the last successful run.
+9. `CommandCenterAnalytics` combines current state and retained facts into readiness-explicit API groups.
 
 ## Invariants
 
@@ -66,6 +72,9 @@ Vite treats `web/` as its source root and writes the production bundle to `web/d
 - Runtime addresses and telemetry are never source-controlled.
 - API response shapes are defined by Pydantic models and covered by contract tests.
 - The frontend consumes the server API rather than protocol-specific data.
+- React never reimplements command-center formulas or substitutes zero for unavailable facts.
+- Forecast failures cannot stop or delay inverter collection.
+- SQLite migrations are versioned and preserve a one-time pre-migration backup.
 
 ## Extension points
 

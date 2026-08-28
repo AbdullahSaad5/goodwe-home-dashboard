@@ -157,3 +157,137 @@ export interface EventItem {
   message: string;
   details: Record<string, unknown>;
 }
+
+export type ReadinessStatus = 'unconfigured' | 'collecting' | 'ready' | 'stale' | 'unavailable';
+export type TrendRange = '15m' | '1h' | '3h' | '6h' | '12h' | '24h';
+export type CommandHistoryRange = '14d' | '30d' | '60d' | '12m';
+
+export interface ReadinessState {
+  status: ReadinessStatus;
+  reason: string;
+  observed: number | null;
+  required: number | null;
+}
+
+export interface ProjectionPoint {
+  timestamp: string;
+  pv_w: number;
+  load_w: number;
+  soc_pct: number;
+  outage_likely: boolean;
+}
+
+export interface CommandCenterResponse {
+  generated_at: string;
+  live: {
+    headline: string;
+    explanation: string;
+    dominant_power_w: number;
+    energy_mix: {
+      home_w: number;
+      solar_w: number;
+      battery_w: number;
+      grid_w: number;
+      unaccounted_w: number;
+      solar_pct: number;
+      battery_pct: number;
+      grid_pct: number;
+      unaccounted_pct: number;
+    };
+    solar_coverage_pct: number | null;
+    inverter_utilization_pct: number | null;
+    power_balance: 'balanced' | 'mismatch';
+    battery_reserve: {
+      status: ReadinessStatus;
+      reason: string;
+      available_kwh: number | null;
+      reserve_margin_pct: number | null;
+      runtime_hours: number | null;
+    };
+  };
+  health: Array<{
+    id: string;
+    label: string;
+    status: 'healthy' | 'warning' | 'error' | 'unknown' | 'stale' | 'unavailable';
+    value: string;
+    detail: string;
+  }>;
+  trend: {
+    range: TrendRange;
+    resolution: string;
+    points: HistoryPoint[];
+    outages: Array<{ start: string; end: string | null }>;
+  };
+  today: {
+    energy: EnergyCounters;
+    yesterday_same_time: EnergyCounters | null;
+    grid_independence_pct: number | null;
+    solar_self_consumption_pct: number | null;
+    peaks: Array<{
+      metric: string;
+      value: number;
+      unit: string;
+      occurred_at: string;
+    }>;
+  };
+  daily_history: Array<{
+    day: string;
+    energy: EnergyCounters;
+    peak_pv_w: number;
+    peak_home_w: number;
+    coverage_pct: number;
+  }>;
+  period_totals: EnergyCounters;
+  lifetime: EnergyCounters;
+  records: Array<{ id: string; label: string; value: number; unit: string; day: string }>;
+  outages: Array<{
+    id: number;
+    start_at: string;
+    end_at: string | null;
+    duration_seconds: number | null;
+    start_soc_pct: number | null;
+    end_soc_pct: number | null;
+    confidence: number;
+    ongoing: boolean;
+  }>;
+  outage_outlook: {
+    status: ReadinessStatus;
+    reason: string;
+    observed_days: number;
+    outage_count: number;
+    next_window_start: string | null;
+    next_window_end: string | null;
+    typical_duration_minutes: number | null;
+    buckets: Array<{ minute_of_day: number; probability_pct: number }>;
+  };
+  forecast: {
+    status: ReadinessStatus;
+    reason: string;
+    provider: string | null;
+    updated_at: string | null;
+    today_kwh: number | null;
+    tomorrow_kwh: number | null;
+    calibration_days: number;
+    points: Array<{ timestamp: string; irradiance_w_m2: number; pv_w: number | null }>;
+  };
+  projection: {
+    status: ReadinessStatus;
+    reason: string;
+    lowest_soc_pct: number | null;
+    lowest_soc_at: string | null;
+    points: ProjectionPoint[];
+  };
+  watchdog: {
+    status: ReadinessStatus;
+    reason: string;
+    metrics: Array<{
+      id: string;
+      label: string;
+      status: ReadinessStatus;
+      value: string;
+      detail: string;
+    }>;
+    recommendation: string;
+  };
+  readiness: Record<string, ReadinessState>;
+}

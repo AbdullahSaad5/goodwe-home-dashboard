@@ -144,7 +144,8 @@ class GoodWeCollector:
         current_minute = int(collected_at.timestamp() // 60)
         persist_raw = current_minute != self._last_raw_minute
 
-        self.database.record_snapshot(snapshot, raw if persist_raw else None)
+        self.database.record_snapshot(snapshot, raw, persist_raw=persist_raw)
+        self.database.observe_grid(snapshot)
         if persist_raw:
             self._last_raw_minute = current_minute
 

@@ -1,19 +1,42 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from './api';
-import { demoEvents, demoHistory, demoSensors, demoSnapshot, demoSummary } from './demo';
+import {
+  demoCommandCenter,
+  demoEvents,
+  demoHistory,
+  demoSensors,
+  demoSnapshot,
+  demoSummary,
+} from './demo';
 import { shiftAnchor } from './period';
-import type { EventItem, HistoryResponse, Period, SensorReading, Snapshot, Summary } from './types';
+import type {
+  CommandCenterResponse,
+  CommandHistoryRange,
+  EventItem,
+  HistoryResponse,
+  Period,
+  SensorReading,
+  Snapshot,
+  Summary,
+  TrendRange,
+} from './types';
 
 const DEFAULT_LIVE_REFRESH_MS = 10_000;
 const MAX_LIVE_REFRESH_MS = 60_000;
 
-export function useDashboard(period: Period, anchor: string) {
+export function useDashboard(
+  period: Period,
+  anchor: string,
+  trendRange: TrendRange = '24h',
+  commandHistoryRange: CommandHistoryRange = '30d',
+) {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [history, setHistory] = useState<HistoryResponse | null>(null);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [comparisonSummary, setComparisonSummary] = useState<Summary | null>(null);
   const [sensors, setSensors] = useState<SensorReading[]>([]);
   const [events, setEvents] = useState<EventItem[]>([]);
+  const [commandCenter, setCommandCenter] = useState<CommandCenterResponse | null>(null);
   const [preview, setPreview] = useState(false);
   const [loading, setLoading] = useState(true);
   const [nextRefreshAt, setNextRefreshAt] = useState(() => Date.now() + DEFAULT_LIVE_REFRESH_MS);
@@ -80,6 +103,20 @@ export function useDashboard(period: Period, anchor: string) {
     }
   }, []);
 
+  const refreshCommandCenter = useCallback(async () => {
+    try {
+      setCommandCenter(await api.commandCenter(trendRange, commandHistoryRange));
+    } catch {
+      if (import.meta.env.DEV) {
+        setCommandCenter({
+          ...demoCommandCenter,
+          trend: { ...demoCommandCenter.trend, range: trendRange },
+        });
+        setPreview(true);
+      }
+    }
+  }, [commandHistoryRange, trendRange]);
+
   useEffect(() => {
     let cancelled = false;
     api
@@ -120,6 +157,12 @@ export function useDashboard(period: Period, anchor: string) {
   }, [refreshReferenceData]);
 
   useEffect(() => {
+    void refreshCommandCenter();
+    const timer = window.setInterval(() => void refreshCommandCenter(), 60_000);
+    return () => window.clearInterval(timer);
+  }, [refreshCommandCenter]);
+
+  useEffect(() => {
     const stream = new EventSource('/api/v1/stream');
     stream.addEventListener('snapshot', (event) => {
       try {
@@ -142,10 +185,12 @@ export function useDashboard(period: Period, anchor: string) {
     comparisonSummary,
     sensors,
     events,
+    commandCenter,
     preview,
     loading,
     nextRefreshAt,
     refreshHistory,
     refreshReferenceData,
+    refreshCommandCenter,
   };
 }

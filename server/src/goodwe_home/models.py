@@ -178,3 +178,217 @@ class SummaryResponse(BaseModel):
     availability_pct: float | None = None
     grid_independence_pct: float | None = None
     solar_retention_pct: float | None = None
+
+
+ReadinessStatus = Literal["unconfigured", "collecting", "ready", "stale", "unavailable"]
+
+
+class ReadinessState(BaseModel):
+    status: ReadinessStatus
+    reason: str
+    observed: int | None = None
+    required: int | None = None
+
+
+class EnergyMix(BaseModel):
+    home_w: float
+    solar_w: float
+    battery_w: float
+    grid_w: float
+    unaccounted_w: float
+    solar_pct: float
+    battery_pct: float
+    grid_pct: float
+    unaccounted_pct: float
+
+
+class BatteryReserveInsight(BaseModel):
+    status: ReadinessStatus
+    reason: str
+    available_kwh: float | None = None
+    reserve_margin_pct: float | None = None
+    runtime_hours: float | None = None
+
+
+class LiveCommandCenter(BaseModel):
+    headline: str
+    explanation: str
+    dominant_power_w: float
+    energy_mix: EnergyMix
+    solar_coverage_pct: float | None = None
+    inverter_utilization_pct: float | None = None
+    power_balance: Literal["balanced", "mismatch"] = "balanced"
+    battery_reserve: BatteryReserveInsight
+
+
+class HealthSignal(BaseModel):
+    id: str
+    label: str
+    status: Literal["healthy", "warning", "error", "unknown", "stale", "unavailable"]
+    value: str
+    detail: str
+
+
+class OutageItem(BaseModel):
+    id: int
+    start_at: datetime
+    end_at: datetime | None = None
+    duration_seconds: float | None = None
+    start_soc_pct: float | None = None
+    end_soc_pct: float | None = None
+    confidence: float = 1
+    ongoing: bool = False
+
+
+class OutageBand(BaseModel):
+    start: datetime
+    end: datetime | None = None
+
+
+class TrendData(BaseModel):
+    range: str
+    resolution: str
+    points: list[HistoryPoint]
+    outages: list[OutageBand]
+
+
+class PeakMetric(BaseModel):
+    metric: str
+    value: float
+    unit: str
+    occurred_at: datetime
+
+
+class TodayInsight(BaseModel):
+    energy: EnergyCounters
+    yesterday_same_time: EnergyCounters | None = None
+    grid_independence_pct: float | None = None
+    solar_self_consumption_pct: float | None = None
+    peaks: list[PeakMetric] = Field(default_factory=list)
+
+
+class DailyEnergyPoint(BaseModel):
+    day: str
+    energy: EnergyCounters
+    peak_pv_w: float
+    peak_home_w: float
+    coverage_pct: float
+
+
+class RecordMetric(BaseModel):
+    id: str
+    label: str
+    value: float
+    unit: str
+    day: str
+
+
+class ForecastPoint(BaseModel):
+    timestamp: datetime
+    irradiance_w_m2: float
+    pv_w: float | None = None
+
+
+class ForecastRun(BaseModel):
+    provider: str
+    issued_at: datetime
+    points: list[ForecastPoint]
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class ForecastCalibrationObservation(BaseModel):
+    actual_kwh: float
+    predicted_kwh: float
+
+
+class DaylightCoverageObservation(BaseModel):
+    day: str
+    sample_count: int
+    expected_samples: float
+
+
+class LoadObservation(BaseModel):
+    minute_of_day: int
+    home_w: float
+    weekend: bool
+
+
+class MpptTotals(BaseModel):
+    mppt1_w_samples: float | None = None
+    mppt2_w_samples: float | None = None
+
+
+class ForecastInsight(BaseModel):
+    status: ReadinessStatus
+    reason: str
+    provider: str | None = None
+    updated_at: datetime | None = None
+    today_kwh: float | None = None
+    tomorrow_kwh: float | None = None
+    calibration_days: int = 0
+    points: list[ForecastPoint] = Field(default_factory=list)
+
+
+class ProjectionPoint(BaseModel):
+    timestamp: datetime
+    pv_w: float
+    load_w: float
+    soc_pct: float
+    outage_likely: bool = False
+
+
+class ProjectionInsight(BaseModel):
+    status: ReadinessStatus
+    reason: str
+    lowest_soc_pct: float | None = None
+    lowest_soc_at: datetime | None = None
+    points: list[ProjectionPoint] = Field(default_factory=list)
+
+
+class OutageBucket(BaseModel):
+    minute_of_day: int
+    probability_pct: float
+
+
+class OutageOutlookInsight(BaseModel):
+    status: ReadinessStatus
+    reason: str
+    observed_days: int = 0
+    outage_count: int = 0
+    next_window_start: datetime | None = None
+    next_window_end: datetime | None = None
+    typical_duration_minutes: float | None = None
+    buckets: list[OutageBucket] = Field(default_factory=list)
+
+
+class WatchdogMetric(BaseModel):
+    id: str
+    label: str
+    status: ReadinessStatus
+    value: str
+    detail: str
+
+
+class WatchdogInsight(BaseModel):
+    status: ReadinessStatus
+    reason: str
+    metrics: list[WatchdogMetric] = Field(default_factory=list)
+    recommendation: str = ""
+
+
+class CommandCenterResponse(BaseModel):
+    generated_at: datetime
+    live: LiveCommandCenter
+    health: list[HealthSignal]
+    trend: TrendData
+    today: TodayInsight
+    daily_history: list[DailyEnergyPoint]
+    period_totals: EnergyCounters
+    lifetime: EnergyCounters
+    records: list[RecordMetric]
+    outages: list[OutageItem]
+    outage_outlook: OutageOutlookInsight
+    forecast: ForecastInsight
+    projection: ProjectionInsight
+    watchdog: WatchdogInsight
+    readiness: dict[str, ReadinessState]

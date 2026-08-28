@@ -36,8 +36,31 @@ import {
   SolarFlowSymbol,
   StatCard,
 } from './DashboardComponents';
+import {
+  CommandCenterFooter,
+  DailyHistoryPanel,
+  EnergyMixPanel,
+  ForecastPanel,
+  OperatingCommandBar,
+  OutageLogPanel,
+  OutlookWatchdogGrid,
+  PerformanceSummaryGrid,
+  PowerTrendsPanel,
+  ProjectionPanel,
+} from './CommandCenterComponents';
 import { formatDateTime, formatNumber, formatPower, periodLabel } from './format';
-import type { EventItem, HistoryPoint, Period, SensorReading, Snapshot, Summary } from './types';
+import type {
+  CommandCenterResponse,
+  CommandHistoryRange,
+  EventItem,
+  HistoryPoint,
+  Page,
+  Period,
+  SensorReading,
+  Snapshot,
+  Summary,
+  TrendRange,
+} from './types';
 import { comparisonPercent } from './ui';
 
 function PageIntro({
@@ -271,115 +294,83 @@ function GridQualityPanel({ snapshot }: { snapshot: Snapshot }) {
 
 export function OverviewPage({
   snapshot,
-  points,
-  summary,
-  comparisonSummary,
+  commandCenter,
   events,
-  period,
-  setPeriod,
-  anchor,
-  setAnchor,
+  trendRange,
+  setTrendRange,
+  commandHistoryRange,
+  setCommandHistoryRange,
+  onNavigate,
   onViewAlerts,
 }: {
   snapshot: Snapshot;
-  points: HistoryPoint[];
-  summary: Summary | null;
-  comparisonSummary: Summary | null;
+  commandCenter: CommandCenterResponse;
   events: EventItem[];
-  period: Period;
-  setPeriod: (period: Period) => void;
-  anchor: string;
-  setAnchor: (anchor: string) => void;
+  trendRange: TrendRange;
+  setTrendRange: (range: TrendRange) => void;
+  commandHistoryRange: CommandHistoryRange;
+  setCommandHistoryRange: (range: CommandHistoryRange) => void;
+  onNavigate: (page: Page) => void;
   onViewAlerts: () => void;
 }) {
-  const energy = summary?.energy;
-  const previous = comparisonSummary?.energy;
-  const comparisonReference = period === 'day' ? 'yesterday' : `previous ${period}`;
+  const energy = commandCenter.today.energy;
+  const previous = commandCenter.today.yesterday_same_time;
+  const peak = (metric: string) =>
+    commandCenter.today.peaks.find((item) => item.metric === metric)?.value;
   return (
     <>
       <h1 className="sr-only">GoodWe Home energy overview</h1>
+      <OperatingCommandBar data={commandCenter} />
       <div className="overview-hero-grid">
         <LiveFlowCard snapshot={snapshot} />
-        <Panel
-          title={`Energy Flow ${period === 'day' ? 'Today' : periodLabel(period)}`}
-          className="overview-chart-card"
-          action={
-            <HistoryControls
-              period={period}
-              setPeriod={setPeriod}
-              anchor={anchor}
-              setAnchor={setAnchor}
-            />
-          }
-        >
-          <div className="chart-legend">
-            <span className="solar">
-              <i />
-              Solar (kW)
-            </span>
-            <span className="home">
-              <i />
-              Load (kW)
-            </span>
-            <span className="battery">
-              <i />
-              Battery (kW)
-            </span>
-            <span className="grid">
-              <i />
-              Grid (kW)
-            </span>
-          </div>
-          <EnergyChart points={points} height={287} />
-        </Panel>
+        <EnergyMixPanel data={commandCenter} />
       </div>
+
+      <PowerTrendsPanel data={commandCenter} range={trendRange} setRange={setTrendRange} />
 
       <div className="daily-grid">
         <DailyCard
-          title={`Solar ${periodLabel(period)}`}
-          value={formatNumber(energy?.solar_kwh)}
+          title="Solar Today"
+          value={formatNumber(energy.solar_kwh)}
           unit="kWh"
           subtitle="Energy Produced"
           tone="solar"
           icon={<SolarFlowSymbol />}
-          comparison={comparisonPercent(energy?.solar_kwh, previous?.solar_kwh)}
-          comparisonReference={comparisonReference}
+          comparison={comparisonPercent(energy.solar_kwh, previous?.solar_kwh)}
+          comparisonReference="yesterday at this time"
           leftLabel="Peak Power"
-          leftValue={formatPower(summary?.peak_pv_w)}
+          leftValue={formatPower(peak('pv_w'))}
           rightLabel="Exported"
-          rightValue={`${formatNumber(energy?.export_kwh)} kWh`}
+          rightValue={`${formatNumber(energy.export_kwh)} kWh`}
         />
         <DailyCard
-          title={`Consumption ${periodLabel(period)}`}
-          value={formatNumber(energy?.load_kwh)}
+          title="Consumption Today"
+          value={formatNumber(energy.load_kwh)}
           unit="kWh"
           subtitle="Energy Consumed"
           tone="home"
           icon={<HomeFlowSymbol />}
-          comparison={comparisonPercent(energy?.load_kwh, previous?.load_kwh)}
+          comparison={comparisonPercent(energy.load_kwh, previous?.load_kwh)}
           comparisonInverse
-          comparisonReference={comparisonReference}
+          comparisonReference="yesterday at this time"
           leftLabel="Current Load"
           leftValue={formatPower(snapshot.power.home_w)}
           rightLabel="Peak Power"
-          rightValue={formatPower(summary?.peak_home_w)}
+          rightValue={formatPower(peak('home_w'))}
         />
         <DailyCard
           title="Grid Independence"
-          value={formatNumber(summary?.grid_independence_pct, 0)}
+          value={formatNumber(commandCenter.today.grid_independence_pct, 0)}
           unit="%"
           subtitle="Self-Sufficiency"
           tone="battery"
           icon={<Leaf />}
-          comparison={comparisonPercent(
-            summary?.grid_independence_pct,
-            comparisonSummary?.grid_independence_pct,
-          )}
-          comparisonReference={comparisonReference}
+          comparison={comparisonPercent(commandCenter.today.grid_independence_pct, null)}
+          comparisonReference="yesterday at this time"
           leftLabel="Imported"
-          leftValue={`${formatNumber(energy?.import_kwh)} kWh`}
+          leftValue={`${formatNumber(energy.import_kwh)} kWh`}
           rightLabel="Exported"
-          rightValue={`${formatNumber(energy?.export_kwh)} kWh`}
+          rightValue={`${formatNumber(energy.export_kwh)} kWh`}
         />
         <DailyCard
           title="Battery SOC"
@@ -388,7 +379,7 @@ export function OverviewPage({
           subtitle="State of Charge"
           tone="battery"
           icon={<BatteryFlowSymbol />}
-          comparisonReference={comparisonReference}
+          comparisonReference="yesterday at this time"
           leftLabel="Temperature"
           leftValue={`${formatNumber(snapshot.battery.temperature_c)} °C`}
           rightLabel="Power"
@@ -418,6 +409,19 @@ export function OverviewPage({
           </button>
         </Panel>
       </div>
+
+      <ProjectionPanel data={commandCenter} />
+      <DailyHistoryPanel
+        data={commandCenter}
+        historyRange={commandHistoryRange}
+        setHistoryRange={setCommandHistoryRange}
+        onNavigate={onNavigate}
+      />
+      <OutageLogPanel data={commandCenter} onNavigate={onNavigate} />
+      <ForecastPanel data={commandCenter} onNavigate={onNavigate} />
+      <OutlookWatchdogGrid data={commandCenter} onNavigate={onNavigate} />
+      <PerformanceSummaryGrid data={commandCenter} snapshot={snapshot} />
+      <CommandCenterFooter data={commandCenter} snapshot={snapshot} />
     </>
   );
 }
@@ -509,7 +513,23 @@ export function HistoryPage({
   );
 }
 
-export function SolarPage({ snapshot, points }: { snapshot: Snapshot; points: HistoryPoint[] }) {
+type DetailHistoryProps = {
+  snapshot: Snapshot;
+  points: HistoryPoint[];
+  period: Period;
+  setPeriod: (period: Period) => void;
+  anchor: string;
+  setAnchor: (anchor: string) => void;
+};
+
+export function SolarPage({
+  snapshot,
+  points,
+  period,
+  setPeriod,
+  anchor,
+  setAnchor,
+}: DetailHistoryProps) {
   return (
     <>
       <PageIntro
@@ -517,9 +537,12 @@ export function SolarPage({ snapshot, points }: { snapshot: Snapshot; points: Hi
         title="Solar array"
         description="Live array output, MPPT operating details and local production history."
         hero={
-          <div className="hero-reading solar">
-            <Sun />
-            {formatPower(snapshot.solar.total_power_w)}
+          <div className="page-intro-actions">
+            <div className="hero-reading solar">
+              <Sun />
+              {formatPower(snapshot.solar.total_power_w)}
+            </div>
+            <HistoryControls {...{ period, setPeriod, anchor, setAnchor }} />
           </div>
         }
       />
@@ -565,7 +588,14 @@ export function SolarPage({ snapshot, points }: { snapshot: Snapshot; points: Hi
   );
 }
 
-export function BatteryPage({ snapshot, points }: { snapshot: Snapshot; points: HistoryPoint[] }) {
+export function BatteryPage({
+  snapshot,
+  points,
+  period,
+  setPeriod,
+  anchor,
+  setAnchor,
+}: DetailHistoryProps) {
   const battery = snapshot.battery;
   return (
     <>
@@ -574,9 +604,12 @@ export function BatteryPage({ snapshot, points }: { snapshot: Snapshot; points: 
         title="Battery health"
         description="Charge state, BMS limits, temperature and cell-balance indicators."
         hero={
-          <div className="hero-reading battery">
-            <BatteryCharging />
-            {formatNumber(battery.soc_pct, 0)}%
+          <div className="page-intro-actions">
+            <div className="hero-reading battery">
+              <BatteryCharging />
+              {formatNumber(battery.soc_pct, 0)}%
+            </div>
+            <HistoryControls {...{ period, setPeriod, anchor, setAnchor }} />
           </div>
         }
       />
@@ -640,7 +673,14 @@ export function BatteryPage({ snapshot, points }: { snapshot: Snapshot; points: 
   );
 }
 
-export function GridPage({ snapshot, points }: { snapshot: Snapshot; points: HistoryPoint[] }) {
+export function GridPage({
+  snapshot,
+  points,
+  period,
+  setPeriod,
+  anchor,
+  setAnchor,
+}: DetailHistoryProps) {
   const grid = snapshot.grid;
   return (
     <>
@@ -649,10 +689,13 @@ export function GridPage({ snapshot, points }: { snapshot: Snapshot; points: His
         title="Where power is going"
         description="Mains quality, household demand, backup output and utility exchange."
         hero={
-          <div className="hero-reading grid">
-            <Grid3X3 />
-            {formatPower(snapshot.power.grid_w)}
-            <small>{snapshot.power.grid_direction}</small>
+          <div className="page-intro-actions">
+            <div className="hero-reading grid">
+              <Grid3X3 />
+              {formatPower(snapshot.power.grid_w)}
+              <small>{snapshot.power.grid_direction}</small>
+            </div>
+            <HistoryControls {...{ period, setPeriod, anchor, setAnchor }} />
           </div>
         }
       />

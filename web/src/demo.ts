@@ -1,4 +1,11 @@
-import type { EventItem, HistoryResponse, SensorReading, Snapshot, Summary } from './types';
+import type {
+  CommandCenterResponse,
+  EventItem,
+  HistoryResponse,
+  SensorReading,
+  Snapshot,
+  Summary,
+} from './types';
 
 export const demoSnapshot: Snapshot = {
   connection: {
@@ -189,3 +196,176 @@ export const demoEvents: EventItem[] = [
     details: {},
   },
 ];
+
+export const demoCommandCenter: CommandCenterResponse = {
+  generated_at: new Date().toISOString(),
+  live: {
+    headline: demoSnapshot.headline,
+    explanation: 'Battery is supplying most of the current home demand.',
+    dominant_power_w: 1071,
+    energy_mix: {
+      home_w: 1077,
+      solar_w: 0,
+      battery_w: 1071,
+      grid_w: 6,
+      unaccounted_w: 0,
+      solar_pct: 0,
+      battery_pct: 99.4,
+      grid_pct: 0.6,
+      unaccounted_pct: 0,
+    },
+    solar_coverage_pct: 0,
+    inverter_utilization_pct: null,
+    power_balance: 'balanced',
+    battery_reserve: {
+      status: 'unconfigured',
+      reason: 'Set BATTERY_CAPACITY_KWH to calculate reserve energy and runtime',
+      available_kwh: null,
+      reserve_margin_pct: null,
+      runtime_hours: null,
+    },
+  },
+  health: [
+    {
+      id: 'grid',
+      label: 'Grid health',
+      status: 'healthy',
+      value: 'Healthy',
+      detail: '239.9 V · 50.09 Hz',
+    },
+    {
+      id: 'reserve',
+      label: 'Battery reserve',
+      status: 'unknown',
+      value: 'Not configured',
+      detail: 'Capacity is not configured',
+    },
+    {
+      id: 'thermal',
+      label: 'Thermals',
+      status: 'healthy',
+      value: 'Normal',
+      detail: 'Inverter 48.8°C · Battery 25.0°C',
+    },
+    {
+      id: 'daylight',
+      label: 'Solar expectation',
+      status: 'unknown',
+      value: 'Forecast unavailable',
+      detail: 'Configure site coordinates',
+    },
+    {
+      id: 'inverter',
+      label: 'Inverter health',
+      status: 'healthy',
+      value: 'Healthy',
+      detail: 'No active fault text',
+    },
+  ],
+  trend: { range: '24h', resolution: '15m', points: demoPoints, outages: [] },
+  today: {
+    energy: demoSnapshot.today,
+    yesterday_same_time: null,
+    grid_independence_pct: 98.5,
+    solar_self_consumption_pct: 16,
+    peaks: [
+      {
+        metric: 'pv_w',
+        value: 4512,
+        unit: 'W',
+        occurred_at: new Date(now - 8 * 3600_000).toISOString(),
+      },
+      {
+        metric: 'home_w',
+        value: 1810,
+        unit: 'W',
+        occurred_at: new Date(now - 2 * 3600_000).toISOString(),
+      },
+    ],
+  },
+  daily_history: Array.from({ length: 14 }, (_, index) => ({
+    day: new Date(now - (13 - index) * 86400_000).toISOString().slice(0, 10),
+    energy: {
+      ...demoSnapshot.today,
+      solar_kwh: 8 + Math.sin(index) * 3,
+      load_kwh: 14 + Math.cos(index) * 2,
+    },
+    peak_pv_w: 4200,
+    peak_home_w: 1900,
+    coverage_pct: 100,
+  })),
+  period_totals: {
+    solar_kwh: 157,
+    load_kwh: 148,
+    export_kwh: 42,
+    import_kwh: 26,
+    battery_charge_kwh: 31,
+    battery_discharge_kwh: 27,
+  },
+  lifetime: demoSnapshot.lifetime,
+  records: [],
+  outages: [],
+  outage_outlook: {
+    status: 'collecting',
+    reason: 'Fourteen valid days and three confirmed outages are required',
+    observed_days: 4,
+    outage_count: 0,
+    next_window_start: null,
+    next_window_end: null,
+    typical_duration_minutes: null,
+    buckets: [],
+  },
+  forecast: {
+    status: 'unconfigured',
+    reason: 'Set SITE_LATITUDE and SITE_LONGITUDE to enable the opt-in forecast',
+    provider: null,
+    updated_at: null,
+    today_kwh: null,
+    tomorrow_kwh: null,
+    calibration_days: 0,
+    points: [],
+  },
+  projection: {
+    status: 'unconfigured',
+    reason: 'Set BATTERY_CAPACITY_KWH before projecting state of charge',
+    lowest_soc_pct: null,
+    lowest_soc_at: null,
+    points: [],
+  },
+  watchdog: {
+    status: 'collecting',
+    reason: 'Health signals become available as observations accumulate',
+    metrics: [
+      {
+        id: 'pv_performance',
+        label: 'PV performance',
+        status: 'collecting',
+        value: 'Learning',
+        detail: 'Requires a calibrated forecast',
+      },
+      {
+        id: 'string_balance',
+        label: 'PV string balance',
+        status: 'collecting',
+        value: 'Learning',
+        detail: '0 of 7 valid days',
+      },
+      {
+        id: 'battery_efficiency',
+        label: 'Battery round-trip',
+        status: 'collecting',
+        value: 'Learning',
+        detail: 'Collecting throughput',
+      },
+    ],
+    recommendation: 'No evidence-based maintenance recommendation is currently available.',
+  },
+  readiness: {
+    outage_outlook: {
+      status: 'collecting',
+      reason: 'Collecting valid days',
+      observed: 4,
+      required: 14,
+    },
+  },
+};

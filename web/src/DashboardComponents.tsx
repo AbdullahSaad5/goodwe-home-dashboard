@@ -8,6 +8,7 @@ import {
   GraphicComponent,
   GridComponent,
   LegendComponent,
+  MarkAreaComponent,
   MarkLineComponent,
   TooltipComponent,
 } from 'echarts/components';
@@ -29,7 +30,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import type { HistoryPoint, Period, Snapshot } from './types';
+import type { HistoryPoint, Period, ProjectionPoint, Snapshot } from './types';
 import { formatNumber, formatPower, formatTime } from './format';
 import { readableAnchor, shiftAnchor, todayInTimeZone } from './period';
 import { palette, type LiveMetric, type SolarUse } from './ui';
@@ -42,6 +43,7 @@ echarts.use([
   LegendComponent,
   DataZoomComponent,
   MarkLineComponent,
+  MarkAreaComponent,
   AriaComponent,
   GraphicComponent,
   CanvasRenderer,
@@ -366,10 +368,14 @@ export function EnergyChart({
   points,
   kind = 'all',
   height = 340,
+  outages = [],
+  showSoc = false,
 }: {
   points: HistoryPoint[];
   kind?: ChartKind;
   height?: number;
+  outages?: Array<{ start: string; end: string | null }>;
+  showSoc?: boolean;
 }) {
   const reduceMotion = useReducedMotion();
   const definitions: SeriesDefinition[] =
@@ -391,6 +397,17 @@ export function EnergyChart({
               { key: 'home_w', name: 'Load', color: palette.home },
               { key: 'battery_w', name: 'Battery', color: palette.battery },
               { key: 'grid_w', name: 'Grid', color: palette.grid },
+              ...(showSoc
+                ? ([
+                    {
+                      key: 'battery_soc_pct',
+                      name: 'SOC',
+                      color: palette.soc,
+                      axis: 1,
+                      dashed: true,
+                    },
+                  ] satisfies SeriesDefinition[])
+                : []),
             ];
   if (!points.length)
     return (
@@ -456,7 +473,7 @@ export function EnergyChart({
         name: 'SOC',
         min: 0,
         max: 100,
-        show: kind === 'battery',
+        show: kind === 'battery' || showSoc,
         axisLabel: { color: '#667085', fontSize: 10, formatter: '{value}%' },
         splitLine: { show: false },
       },
@@ -489,6 +506,17 @@ export function EnergyChart({
               data: [{ yAxis: 0 }],
             }
           : undefined,
+      markArea:
+        item.name === definitions[0].name && outages.length
+          ? {
+              silent: true,
+              itemStyle: { color: 'rgba(229, 72, 77, 0.09)' },
+              data: outages.map((outage) => [
+                { xAxis: outage.start },
+                { xAxis: outage.end ?? points.at(-1)?.timestamp },
+              ]),
+            }
+          : undefined,
       data: points.map((point) => [
         point.timestamp,
         item.key === 'battery_soc_pct' ? Number(point[item.key]) : Number(point[item.key]) / 1000,
@@ -501,6 +529,75 @@ export function EnergyChart({
       option={option}
       height={height}
       label={`Interactive ${kind === 'all' ? 'solar, load, battery and grid' : kind} energy history chart`}
+    />
+  );
+}
+
+export function ProjectionChart({
+  points,
+  height = 330,
+}: {
+  points: ProjectionPoint[];
+  height?: number;
+}) {
+  const reduceMotion = useReducedMotion();
+  if (!points.length)
+    return <EmptyState title="No projection yet" detail="Projection data is still collecting." />;
+  const series = [
+    { name: 'Solar', color: palette.solar, key: 'pv_w', axis: 0 },
+    { name: 'Load', color: palette.home, key: 'load_w', axis: 0 },
+    { name: 'SOC', color: palette.soc, key: 'soc_pct', axis: 1 },
+  ] as const;
+  const option: echarts.EChartsCoreOption = {
+    animation: !reduceMotion,
+    animationDuration: animationDuration(reduceMotion, 320),
+    aria: { enabled: true, decal: { show: false } },
+    color: series.map((item) => item.color),
+    grid: { top: 18, right: 50, bottom: 42, left: 52 },
+    legend: { show: false },
+    tooltip: { trigger: 'axis', confine: true },
+    xAxis: {
+      type: 'time',
+      axisLine: { lineStyle: { color: '#dfe5ed' } },
+      axisTick: { show: false },
+      axisLabel: { color: '#667085', fontSize: 10 },
+      splitLine: { show: false },
+    },
+    yAxis: [
+      {
+        type: 'value',
+        name: 'kW',
+        axisLabel: { color: '#667085', fontSize: 10, formatter: '{value} kW' },
+        splitLine: { lineStyle: { color: '#e8edf4', type: 'dashed' } },
+      },
+      {
+        type: 'value',
+        name: 'SOC',
+        min: 0,
+        max: 100,
+        axisLabel: { color: '#667085', fontSize: 10, formatter: '{value}%' },
+        splitLine: { show: false },
+      },
+    ],
+    series: series.map((item) => ({
+      name: item.name,
+      type: 'line',
+      smooth: 0.24,
+      showSymbol: false,
+      yAxisIndex: item.axis,
+      lineStyle: { width: 2, type: item.name === 'SOC' ? 'dashed' : 'solid' },
+      areaStyle: item.name === 'Solar' ? { opacity: 0.1 } : undefined,
+      data: points.map((point) => [
+        point.timestamp,
+        item.axis === 1 ? point[item.key] : point[item.key] / 1000,
+      ]),
+    })),
+  };
+  return (
+    <EChart
+      option={option}
+      height={height}
+      label="Projected solar, household load, and battery state of charge"
     />
   );
 }

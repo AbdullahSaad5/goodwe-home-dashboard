@@ -27,6 +27,10 @@ It is read-only by design. The dashboard never changes inverter settings, operat
 - Responsive desktop, tablet, and mobile interface
 - SQLite history with no external database or cloud dependency
 - Server-Sent Events for live updates without page refreshes
+- Operational 15-minute to 24-hour trends with outage shading and table mode
+- Optional calibrated solar forecast, learned load profile, and 24-hour SOC projection
+- Debounced outage history, timestamped daily peaks, records, and advisory watchdogs
+- Light full-screen wall mode and opt-in foreground desktop notifications
 
 ## Quick start
 
@@ -68,16 +72,24 @@ After the first successful discovery, later launches normally connect directly t
 
 Configuration is supplied through environment variables. Every setting is optional.
 
-| Variable                | Default               | Purpose                                    |
-| ----------------------- | --------------------- | ------------------------------------------ |
-| `GOODWE_HOST`           | Automatic             | Optional inverter address override         |
-| `GOODWE_PORT`           | `502`                 | Local inverter communication port          |
-| `POLL_INTERVAL_SECONDS` | `10`                  | Live telemetry polling interval            |
-| `STALE_AFTER_SECONDS`   | `30`                  | Age before readings are marked stale       |
-| `DASHBOARD_TIMEZONE`    | `Asia/Karachi`        | Calendar boundaries and reporting timezone |
-| `DATABASE_PATH`         | `data/goodwe.sqlite3` | Local SQLite database path                 |
-| `STATIC_DIR`            | `web/dist`            | Built frontend directory                   |
-| `PORT`                  | `8080`                | Dashboard web-server port                  |
+| Variable                | Default               | Purpose                                             |
+| ----------------------- | --------------------- | --------------------------------------------------- |
+| `GOODWE_HOST`           | Automatic             | Optional inverter address override                  |
+| `GOODWE_PORT`           | `502`                 | Local inverter communication port                   |
+| `POLL_INTERVAL_SECONDS` | `10`                  | Live telemetry polling interval                     |
+| `STALE_AFTER_SECONDS`   | `30`                  | Age before readings are marked stale                |
+| `DASHBOARD_TIMEZONE`    | `Asia/Karachi`        | Calendar boundaries and reporting timezone          |
+| `DATABASE_PATH`         | `data/goodwe.sqlite3` | Local SQLite database path                          |
+| `STATIC_DIR`            | `web/dist`            | Built frontend directory                            |
+| `PORT`                  | `8080`                | Dashboard web-server port                           |
+| `BATTERY_CAPACITY_KWH`  | Unconfigured          | Enables reserve energy, runtime, and SOC projection |
+| `BATTERY_RESERVE_PCT`   | `20`                  | Reserve floor used by the projection                |
+| `INVERTER_RATED_W`      | Unconfigured          | Enables live inverter utilisation                   |
+| `SITE_LATITUDE`         | Unconfigured          | Enables opt-in weather forecasting                  |
+| `SITE_LONGITUDE`        | Unconfigured          | Enables opt-in weather forecasting                  |
+| `PV_ARRAY_KWP`          | Unconfigured          | Converts forecast irradiation to PV energy          |
+| `PV_TILT_DEG`           | Unconfigured          | Optional panel tilt for tilted irradiance           |
+| `PV_AZIMUTH_DEG`        | Unconfigured          | Optional panel azimuth for tilted irradiance        |
 
 Example:
 
@@ -87,15 +99,15 @@ DASHBOARD_TIMEZONE=America/Toronto PORT=8080 ./start.sh
 
 ## Dashboard sections
 
-| Section      | Contents                                                                             |
-| ------------ | ------------------------------------------------------------------------------------ |
-| Overview     | Live power flow, energy chart, daily totals, MPPT, battery, grid quality, and alerts |
-| History      | Anchored day, week, month, and year charts with CSV export                           |
-| Solar        | PV production, MPPT voltage, current, power, and operating state                     |
-| Battery      | SOC, SOH, voltage, current, temperatures, cell spread, limits, and BMS details       |
-| Grid & Loads | Import/export, voltage, frequency, apparent power, reactive power, and meter state   |
-| System       | Inverter health, firmware, clocks, temperatures, registers, and local events         |
-| Raw Data     | Searchable access to every sensor returned by the inverter                           |
+| Section      | Contents                                                                                                              |
+| ------------ | --------------------------------------------------------------------------------------------------------------------- |
+| Overview     | Command-center health, live flow and mix, operational trends, projections, forecasts, outages, records, and watchdogs |
+| History      | Anchored day, week, month, and year charts with CSV export                                                            |
+| Solar        | PV production, MPPT voltage, current, power, and operating state                                                      |
+| Battery      | SOC, SOH, voltage, current, temperatures, cell spread, limits, and BMS details                                        |
+| Grid & Loads | Import/export, voltage, frequency, apparent power, reactive power, and meter state                                    |
+| System       | Inverter health, firmware, clocks, temperatures, registers, and local events                                          |
+| Raw Data     | Searchable access to every sensor returned by the inverter                                                            |
 
 ## Data storage
 
@@ -106,7 +118,11 @@ By default, application data stays in `data/goodwe.sqlite3`, which is excluded f
 - Core samples and raw snapshots are retained for 30 days.
 - One-minute aggregates are retained for one year.
 - Longer-term 15-minute and daily aggregates are retained indefinitely.
+- Daily records, timestamped peaks, and confirmed outage summaries are retained indefinitely.
+- Successful forecast runs are cached for 60 days; a failed refresh never interrupts collection.
 - The last working inverter address is saved in the same database.
+
+The first schema upgrade creates a one-time `*.pre-command-center.bak` SQLite backup before changing the database. Missing historical MPPT or temperature values remain null.
 
 SQLite runs in WAL mode so the dashboard can read history while the collector writes new samples.
 
@@ -114,18 +130,21 @@ SQLite runs in WAL mode so the dashboard can read history while the collector wr
 
 Every dashboard API endpoint is read-only.
 
-| Endpoint                 | Purpose                                      |
-| ------------------------ | -------------------------------------------- |
-| `GET /api/v1/health`     | Collector health and active inverter address |
-| `GET /api/v1/status`     | Latest normalized snapshot                   |
-| `GET /api/v1/history`    | Time-series history for a selected period    |
-| `GET /api/v1/summary`    | Aggregated energy and availability metrics   |
-| `GET /api/v1/sensors`    | Latest raw sensor readings                   |
-| `GET /api/v1/events`     | Local collector and inverter events          |
-| `GET /api/v1/export.csv` | CSV export for a selected period             |
-| `GET /api/v1/stream`     | Live snapshot stream over SSE                |
+| Endpoint                     | Purpose                                      |
+| ---------------------------- | -------------------------------------------- |
+| `GET /api/v1/health`         | Collector health and active inverter address |
+| `GET /api/v1/status`         | Latest normalized snapshot                   |
+| `GET /api/v1/history`        | Time-series history for a selected period    |
+| `GET /api/v1/summary`        | Aggregated energy and availability metrics   |
+| `GET /api/v1/sensors`        | Latest raw sensor readings                   |
+| `GET /api/v1/events`         | Local collector and inverter events          |
+| `GET /api/v1/command-center` | Presentation-ready operational intelligence  |
+| `GET /api/v1/export.csv`     | CSV export for a selected period             |
+| `GET /api/v1/stream`         | Live snapshot stream over SSE                |
 
 History, summary, and export requests accept `period=day|week|month|year` and an optional `anchor=YYYY-MM-DD`.
+
+Command Center accepts `range=15m|1h|3h|6h|12h|24h` and `history=14d|30d|60d|12m`. CSV export accepts `dataset=telemetry|daily`; telemetry remains the default.
 
 Battery power is positive while discharging and negative while charging. Grid power is positive while exporting and negative while importing.
 
@@ -181,6 +200,8 @@ See [Contributing](CONTRIBUTING.md) for the complete development workflow and pu
 - Inverter communication is read-only.
 - No inverter credentials or IP addresses are committed to Git.
 - Telemetry and history stay on the local machine.
+- When forecasting is enabled, site coordinates—but never inverter telemetry—are sent to Open-Meteo.
+- Desktop notifications are foreground-only and require localhost or HTTPS; in-app alerts remain available everywhere.
 - The SQLite database and environment files are ignored by Git.
 - No configuration or control endpoints are exposed.
 

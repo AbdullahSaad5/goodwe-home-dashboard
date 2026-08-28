@@ -12,10 +12,13 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
+from .analytics import CommandCenterAnalytics
 from .collector import GoodWeCollector
 from .config import settings
 from .database import DashboardDatabase
+from .forecast import ForecastCoordinator, OpenMeteoForecastProvider
 from .models import (
+    CommandCenterResponse,
     EventItem,
     HistoryResponse,
     NormalizedSnapshot,
@@ -28,14 +31,26 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
 )
 
-database = DashboardDatabase(settings.database_path, settings.timezone)
+database = DashboardDatabase(
+    settings.database_path, settings.timezone, settings.poll_interval_seconds
+)
 collector = GoodWeCollector(settings, database)
+command_center_analytics = CommandCenterAnalytics(database, settings)
+forecast_coordinator = (
+    ForecastCoordinator(database, OpenMeteoForecastProvider(settings))
+    if settings.forecast_configured
+    else None
+)
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     await collector.start()
+    if forecast_coordinator:
+        await forecast_coordinator.start()
     yield
+    if forecast_coordinator:
+        await forecast_coordinator.stop()
     await collector.stop()
     database.close()
 
@@ -93,32 +108,74 @@ def events(limit: Annotated[int, Query(ge=1, le=500)] = 100) -> list[EventItem]:
     return database.list_events(limit)
 
 
+@app.get("/api/v1/command-center", response_model=CommandCenterResponse)
+def command_center(
+    trend_range: Annotated[
+        Literal["15m", "1h", "3h", "6h", "12h", "24h"], Query(alias="range")
+    ] = "24h",
+    history_range: Annotated[Literal["14d", "30d", "60d", "12m"], Query(alias="history")] = "30d",
+) -> CommandCenterResponse | JSONResponse:
+    snapshot = collector.status()
+    if snapshot is None:
+        return JSONResponse(collector.starting_status(), status_code=503)
+    return command_center_analytics.build(
+        snapshot,
+        trend_range=trend_range,
+        history_range=history_range,
+    )
+
+
 @app.get("/api/v1/export.csv")
 def export_csv(
     period: Annotated[Literal["day", "week", "month", "year"], Query()] = "day",
     anchor: Annotated[date | None, Query()] = None,
+    dataset: Annotated[Literal["telemetry", "daily"], Query()] = "telemetry",
 ) -> StreamingResponse:
-    rows = database.export_rows(period, anchor)
+    rows = (
+        database.export_daily_rows(period, anchor)
+        if dataset == "daily"
+        else database.export_rows(period, anchor)
+    )
     buffer = io.StringIO()
-    fieldnames = [
-        "timestamp",
-        "pv_w",
-        "home_w",
-        "grid_w",
-        "battery_w",
-        "backup_w",
-        "battery_soc_pct",
-        "grid_voltage_v",
-        "grid_frequency_hz",
-        "inverter_temperature_c",
-    ]
+    fieldnames = (
+        [
+            "day",
+            "solar_kwh",
+            "load_kwh",
+            "export_kwh",
+            "import_kwh",
+            "battery_charge_kwh",
+            "battery_discharge_kwh",
+            "peak_pv_w",
+            "peak_home_w",
+        ]
+        if dataset == "daily"
+        else [
+            "timestamp",
+            "pv_w",
+            "home_w",
+            "grid_w",
+            "battery_w",
+            "backup_w",
+            "battery_soc_pct",
+            "grid_voltage_v",
+            "grid_frequency_hz",
+            "inverter_temperature_c",
+        ]
+    )
     writer = csv.DictWriter(buffer, fieldnames=fieldnames)
     writer.writeheader()
     writer.writerows(rows)
     return StreamingResponse(
         iter([buffer.getvalue()]),
         media_type="text/csv",
-        headers={"Content-Disposition": f'attachment; filename="goodwe-home-{period}.csv"'},
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="goodwe-home-daily-{period}.csv"'
+                if dataset == "daily"
+                else f'attachment; filename="goodwe-home-{period}.csv"'
+            )
+        },
     )
 
 

@@ -6,8 +6,11 @@ import {
   MobileNavigation,
   RefreshPill,
   connectionMessage,
+  isWallModeExitKey,
+  notificationAvailability,
   refreshCountdown,
 } from './App';
+import { PowerTrendsPanel, ProjectionPanel } from './CommandCenterComponents';
 import {
   AnimatedReading,
   HistoryControls,
@@ -15,7 +18,7 @@ import {
   PeriodControl,
   animationDuration,
 } from './DashboardComponents';
-import { demoEvents, demoSnapshot } from './demo';
+import { demoCommandCenter, demoEvents, demoSnapshot } from './demo';
 import { TooltipProvider } from './components/ui/tooltip';
 import { todayInTimeZone } from './period';
 
@@ -81,6 +84,10 @@ describe('dashboard interactions', () => {
           snapshot={demoSnapshot}
           events={demoEvents}
           nextRefreshAt={Date.now() + 10_000}
+          wallMode={false}
+          onToggleWallMode={vi.fn()}
+          notificationStatus="default"
+          onEnableNotifications={vi.fn()}
         />
       </TooltipProvider>,
     );
@@ -126,5 +133,59 @@ describe('dashboard interactions', () => {
     expect(connectionMessage('live')).toBeNull();
     expect(connectionMessage('stale')).toContain('30 seconds');
     expect(connectionMessage('offline')).toContain('stored history is safe');
+  });
+
+  it('explains browser notification availability without requesting permission', () => {
+    expect(notificationAvailability(false, true)).toBe('insecure');
+    expect(notificationAvailability(true, false)).toBe('unsupported');
+    expect(notificationAvailability(true, true, 'denied')).toBe('denied');
+  });
+
+  it('reserves Escape for leaving wall mode', () => {
+    expect(isWallModeExitKey('Escape')).toBe(true);
+    expect(isWallModeExitKey('Enter')).toBe(false);
+  });
+
+  it('switches the operational trend range and accessible table mode', async () => {
+    const setRange = vi.fn();
+    render(
+      <PowerTrendsPanel
+        data={demoCommandCenter}
+        range="24h"
+        setRange={setRange}
+        initialView="table"
+      />,
+    );
+    await userEvent.click(screen.getByRole('button', { name: '3h' }));
+    expect(setRange).toHaveBeenCalledWith('3h');
+    expect(screen.getByRole('table')).toBeInTheDocument();
+  });
+
+  it.each(['unconfigured', 'collecting', 'stale', 'unavailable'] as const)(
+    'renders the %s projection readiness state without a numeric estimate',
+    (status) => {
+      const data = structuredClone(demoCommandCenter);
+      data.projection = { ...data.projection, status, reason: `${status} reason`, points: [] };
+      render(<ProjectionPanel data={data} />);
+      expect(
+        screen.getByText(status.charAt(0).toUpperCase() + status.slice(1), { exact: true }),
+      ).toBeInTheDocument();
+      expect(screen.getByText(`${status} reason`)).toBeInTheDocument();
+    },
+  );
+
+  it('renders a ready projection as a policy-backed result', () => {
+    const data = structuredClone(demoCommandCenter);
+    data.projection = {
+      ...data.projection,
+      status: 'ready',
+      reason: 'ready',
+      lowest_soc_pct: 42,
+      lowest_soc_at: new Date().toISOString(),
+      points: [],
+    };
+    render(<ProjectionPanel data={data} />);
+    expect(screen.getByText('Reserve policy')).toBeInTheDocument();
+    expect(screen.getByText('Protected')).toBeInTheDocument();
   });
 });
