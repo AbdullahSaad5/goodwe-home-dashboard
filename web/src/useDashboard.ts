@@ -152,15 +152,20 @@ export function useDashboard(
 
   useEffect(() => {
     void refreshReferenceData();
-    const timer = window.setInterval(() => void refreshReferenceData(), 60_000);
-    return () => window.clearInterval(timer);
   }, [refreshReferenceData]);
 
   useEffect(() => {
     void refreshCommandCenter();
-    const timer = window.setInterval(() => void refreshCommandCenter(), 60_000);
-    return () => window.clearInterval(timer);
   }, [refreshCommandCenter]);
+
+  const refreshDashboardData = useCallback(async () => {
+    await Promise.all([refreshHistory(), refreshReferenceData(), refreshCommandCenter()]);
+  }, [refreshCommandCenter, refreshHistory, refreshReferenceData]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => void refreshDashboardData(), 60_000);
+    return () => window.clearInterval(timer);
+  }, [refreshDashboardData]);
 
   useEffect(() => {
     const stream = new EventSource('/api/v1/stream');
@@ -171,12 +176,13 @@ export function useDashboard(
         noteSnapshotArrival(value);
         setPreview(false);
         setLoading(false);
+        void refreshDashboardData();
       } catch {
         /* Ignore malformed updates; the next poll will recover. */
       }
     });
     return () => stream.close();
-  }, [noteSnapshotArrival]);
+  }, [noteSnapshotArrival, refreshDashboardData]);
 
   return {
     snapshot,
