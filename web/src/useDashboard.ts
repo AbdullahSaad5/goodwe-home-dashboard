@@ -37,6 +37,7 @@ export function useDashboard(
   const [sensors, setSensors] = useState<SensorReading[]>([]);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [commandCenter, setCommandCenter] = useState<CommandCenterResponse | null>(null);
+  const [commandCenterLoading, setCommandCenterLoading] = useState(true);
   const [preview, setPreview] = useState(false);
   const [loading, setLoading] = useState(true);
   const [nextRefreshAt, setNextRefreshAt] = useState(() => Date.now() + DEFAULT_LIVE_REFRESH_MS);
@@ -104,6 +105,7 @@ export function useDashboard(
   }, []);
 
   const refreshCommandCenter = useCallback(async () => {
+    setCommandCenterLoading(true);
     try {
       setCommandCenter(await api.commandCenter(trendRange, commandHistoryRange));
     } catch {
@@ -114,34 +116,32 @@ export function useDashboard(
         });
         setPreview(true);
       }
+    } finally {
+      setCommandCenterLoading(false);
     }
   }, [commandHistoryRange, trendRange]);
 
-  useEffect(() => {
-    let cancelled = false;
-    api
-      .status()
-      .then((value) => {
-        if (!cancelled) {
-          setSnapshot(value);
-          noteSnapshotArrival(value);
-          setPreview(false);
-        }
-      })
-      .catch(() => {
-        if (!cancelled && import.meta.env.DEV) {
-          setSnapshot(demoSnapshot);
-          noteSnapshotArrival(demoSnapshot);
-          setPreview(true);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+  const refreshSnapshot = useCallback(async () => {
+    setLoading(true);
+    try {
+      const value = await api.status();
+      setSnapshot(value);
+      noteSnapshotArrival(value);
+      setPreview(false);
+    } catch {
+      if (import.meta.env.DEV) {
+        setSnapshot(demoSnapshot);
+        noteSnapshotArrival(demoSnapshot);
+        setPreview(true);
+      }
+    } finally {
+      setLoading(false);
+    }
   }, [noteSnapshotArrival]);
+
+  useEffect(() => {
+    void refreshSnapshot();
+  }, [refreshSnapshot]);
 
   useEffect(() => {
     void refreshHistory();
@@ -186,9 +186,11 @@ export function useDashboard(
     sensors,
     events,
     commandCenter,
+    commandCenterLoading,
     preview,
     loading,
     nextRefreshAt,
+    refreshSnapshot,
     refreshHistory,
     refreshReferenceData,
     refreshCommandCenter,

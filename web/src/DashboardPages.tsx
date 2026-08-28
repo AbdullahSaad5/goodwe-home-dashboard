@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   BatteryCharging,
   Bell,
+  Check,
   ChevronRight,
   CircleCheck,
   Database,
@@ -11,12 +12,15 @@ import {
   Gauge,
   Grid3X3,
   HeartPulse,
+  House,
   Info,
   Leaf,
+  LockKeyhole,
   Radio,
   Server,
   ShieldCheck,
   Sun,
+  Wifi,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { buttonVariants } from '@/components/ui/button';
@@ -929,14 +933,177 @@ export function RawPage({ sensors }: { sensors: SensorReading[] }) {
   );
 }
 
-export function LoadingPage({ loading }: { loading: boolean }) {
+type ConnectionPhase =
+  'collector-connecting' | 'collector-waiting' | 'overview-preparing' | 'overview-failed';
+type ConnectionStepStatus = 'complete' | 'active' | 'waiting' | 'pending';
+type ConnectionStepIcon = 'check' | 'radio' | 'activity' | 'lock';
+
+interface ConnectionPresentation {
+  stageClass: 'collector-stage' | 'overview-stage';
+  kicker: string;
+  title: string;
+  detail: string;
+  progress: 'active' | 'waiting';
+  collector: { status: ConnectionStepStatus; label: string; icon: ConnectionStepIcon };
+  intelligence: { status: ConnectionStepStatus; label: string; icon: ConnectionStepIcon };
+  canRetry: boolean;
+}
+
+const connectionPresentations: Record<ConnectionPhase, ConnectionPresentation> = {
+  'collector-connecting': {
+    stageClass: 'collector-stage',
+    kicker: 'LAN connection',
+    title: 'Connecting to GoodWe Home',
+    detail: 'Establishing a read-only link to your local energy collector.',
+    progress: 'active',
+    collector: { status: 'active', label: 'Connecting', icon: 'radio' },
+    intelligence: { status: 'pending', label: 'Waiting for telemetry', icon: 'lock' },
+    canRetry: false,
+  },
+  'collector-waiting': {
+    stageClass: 'collector-stage',
+    kicker: 'LAN connection',
+    title: 'Local collector is not responding',
+    detail:
+      'No telemetry response was received. Check that the local service is running, then try again.',
+    progress: 'waiting',
+    collector: { status: 'waiting', label: 'Waiting', icon: 'radio' },
+    intelligence: { status: 'pending', label: 'Waiting for telemetry', icon: 'lock' },
+    canRetry: true,
+  },
+  'overview-preparing': {
+    stageClass: 'overview-stage',
+    kicker: 'Telemetry connected',
+    title: 'Preparing your energy overview',
+    detail: 'Live readings are secure. We are assembling trends, records and readiness insights.',
+    progress: 'active',
+    collector: { status: 'complete', label: 'Connected', icon: 'check' },
+    intelligence: { status: 'active', label: 'Preparing', icon: 'activity' },
+    canRetry: false,
+  },
+  'overview-failed': {
+    stageClass: 'overview-stage',
+    kicker: 'Telemetry connected',
+    title: 'Energy intelligence is taking longer than expected',
+    detail:
+      'Live telemetry is connected, but the overview could not be prepared. We will keep trying.',
+    progress: 'waiting',
+    collector: { status: 'complete', label: 'Connected', icon: 'check' },
+    intelligence: { status: 'waiting', label: 'Retrying soon', icon: 'activity' },
+    canRetry: true,
+  },
+};
+
+function ConnectionStepIcon({ icon }: { icon: ConnectionStepIcon }) {
+  if (icon === 'check') return <Check />;
+  if (icon === 'radio') return <Radio />;
+  if (icon === 'activity') return <Activity />;
+  return <LockKeyhole />;
+}
+
+function connectionPhase(stage: 'collector' | 'overview', loading: boolean): ConnectionPhase {
+  if (stage === 'collector') return loading ? 'collector-connecting' : 'collector-waiting';
+  return loading ? 'overview-preparing' : 'overview-failed';
+}
+
+export function LoadingPage({
+  loading,
+  stage = 'collector',
+  onRetry,
+}: {
+  loading: boolean;
+  stage?: 'collector' | 'overview';
+  onRetry?: () => void;
+}) {
+  const phase = connectionPhase(stage, loading);
+  const presentation = connectionPresentations[phase];
+
   return (
-    <div className="loading-screen">
-      <div className="loading-logo">
-        <Activity />
+    <section
+      className={`loading-screen ${presentation.stageClass} ${phase}`}
+      aria-labelledby="connection-title"
+      aria-live="polite"
+    >
+      <div className="connection-glow connection-glow-one" aria-hidden="true" />
+      <div className="connection-glow connection-glow-two" aria-hidden="true" />
+      <div className="connection-card">
+        <div className="connection-visual" aria-hidden="true">
+          <div className="connection-orbit orbit-outer">
+            <span className="orbit-node solar-node">
+              <Sun />
+            </span>
+            <span className="orbit-node home-node">
+              <House />
+            </span>
+            <span className="orbit-node grid-node">
+              <Wifi />
+            </span>
+          </div>
+          <div className="connection-orbit orbit-inner" />
+          <div className="connection-core">
+            <Activity />
+            <span />
+          </div>
+          <p>Local energy link</p>
+        </div>
+
+        <div className="connection-copy">
+          <div className="connection-kicker">
+            <span className="status-dot" />
+            {presentation.kicker}
+          </div>
+          <h1 id="connection-title">{presentation.title}</h1>
+          <p className="connection-detail">{presentation.detail}</p>
+
+          <div className={`connection-progress ${presentation.progress}`} aria-hidden="true">
+            <span />
+          </div>
+
+          <ol className="connection-steps" aria-label="Connection progress">
+            <li className="complete">
+              <span>
+                <Check />
+              </span>
+              <div>
+                <strong>Dashboard interface</strong>
+                <small>Ready</small>
+              </div>
+            </li>
+            <li className={presentation.collector.status}>
+              <span>
+                <ConnectionStepIcon icon={presentation.collector.icon} />
+              </span>
+              <div>
+                <strong>Local collector</strong>
+                <small>{presentation.collector.label}</small>
+              </div>
+            </li>
+            <li className={presentation.intelligence.status}>
+              <span>
+                <ConnectionStepIcon icon={presentation.intelligence.icon} />
+              </span>
+              <div>
+                <strong>Energy intelligence</strong>
+                <small>{presentation.intelligence.label}</small>
+              </div>
+            </li>
+          </ol>
+
+          {presentation.canRetry && onRetry && (
+            <button type="button" className="connection-retry" onClick={onRetry}>
+              Try again now
+            </button>
+          )}
+
+          <div className="connection-assurance">
+            <ShieldCheck />
+            <span>
+              <strong>Read-only by design</strong>
+              No inverter commands are sent and telemetry stays on your network.
+            </span>
+          </div>
+        </div>
       </div>
-      <h1>Connecting to GoodWe Home</h1>
-      <p>{loading ? 'Starting the local collector…' : 'No telemetry is available yet.'}</p>
-    </div>
+    </section>
   );
 }

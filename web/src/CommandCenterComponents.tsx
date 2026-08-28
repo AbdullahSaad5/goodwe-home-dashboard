@@ -27,6 +27,14 @@ import type {
   TrendRange,
 } from './types';
 
+const healthSignalIcons: Record<string, React.ReactNode> = {
+  grid: <Grid3X3 />,
+  reserve: <BatteryCharging />,
+  thermal: <ThermometerSun />,
+  daylight: <CloudSun />,
+  inverter: <ShieldCheck />,
+};
+
 function statusLabel(status: string, observed?: number | null, required?: number | null) {
   if (status === 'collecting' && observed != null && required != null)
     return `Collecting · ${observed}/${required}`;
@@ -54,13 +62,20 @@ export function OperatingCommandBar({ data }: { data: CommandCenterResponse }) {
           <h1 id="operating-mode-title">{data.live.headline}</h1>
           <p>{data.live.explanation}</p>
         </div>
-        <strong>{formatPower(data.live.dominant_power_w)}</strong>
+        <div className="command-banner-power">
+          <span>Dominant supply</span>
+          <strong>{formatPower(data.live.dominant_power_w)}</strong>
+          <small>Live now</small>
+        </div>
       </section>
       <div className="health-strip" aria-label="Live system health signals">
         {data.health.map((signal) => (
           <article className={`health-signal ${signal.status}`} key={signal.id}>
-            <span className="status-dot" />
-            <div>
+            <span className="health-signal-icon">
+              {healthSignalIcons[signal.id] ?? <Gauge />}
+              <i className="status-dot" />
+            </span>
+            <div className="health-signal-copy">
               <strong>{signal.label}</strong>
               <span>{signal.value}</span>
               <small>{signal.detail}</small>

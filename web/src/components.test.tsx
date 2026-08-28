@@ -10,7 +10,7 @@ import {
   notificationAvailability,
   refreshCountdown,
 } from './App';
-import { PowerTrendsPanel, ProjectionPanel } from './CommandCenterComponents';
+import { OperatingCommandBar, PowerTrendsPanel, ProjectionPanel } from './CommandCenterComponents';
 import {
   AnimatedReading,
   HistoryControls,
@@ -18,6 +18,7 @@ import {
   PeriodControl,
   animationDuration,
 } from './DashboardComponents';
+import { LoadingPage } from './DashboardPages';
 import { demoCommandCenter, demoEvents, demoSnapshot } from './demo';
 import { TooltipProvider } from './components/ui/tooltip';
 import { todayInTimeZone } from './period';
@@ -133,6 +134,49 @@ describe('dashboard interactions', () => {
     expect(connectionMessage('live')).toBeNull();
     expect(connectionMessage('stale')).toContain('30 seconds');
     expect(connectionMessage('offline')).toContain('stored history is safe');
+  });
+
+  it('explains the safe local connection while waiting for telemetry', () => {
+    render(<LoadingPage loading stage="collector" />);
+    expect(screen.getByRole('heading', { name: 'Connecting to GoodWe Home' })).toBeInTheDocument();
+    expect(screen.getByText('Read-only by design')).toBeInTheDocument();
+    expect(
+      screen.getByText('No inverter commands are sent and telemetry stays on your network.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: 'Connection progress' })).toBeInTheDocument();
+  });
+
+  it('distinguishes overview preparation from inverter connection', () => {
+    render(<LoadingPage loading stage="overview" />);
+    expect(
+      screen.getByRole('heading', { name: 'Preparing your energy overview' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Telemetry connected')).toBeInTheDocument();
+    expect(screen.getByText('Preparing')).toBeInTheDocument();
+  });
+
+  it('offers an immediate retry when overview preparation fails', async () => {
+    const onRetry = vi.fn();
+    render(<LoadingPage loading={false} stage="overview" onRetry={onRetry} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Try again now' }));
+    expect(onRetry).toHaveBeenCalledOnce();
+  });
+
+  it('offers an immediate retry when the local collector does not respond', async () => {
+    const onRetry = vi.fn();
+    render(<LoadingPage loading={false} stage="collector" onRetry={onRetry} />);
+    expect(
+      screen.getByRole('heading', { name: 'Local collector is not responding' }),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Try again now' }));
+    expect(onRetry).toHaveBeenCalledOnce();
+  });
+
+  it('gives the connected operating mode a clearly labelled live supply metric', () => {
+    render(<OperatingCommandBar data={demoCommandCenter} />);
+    expect(screen.getByText('Dominant supply')).toBeInTheDocument();
+    expect(screen.getByText('Live now')).toBeInTheDocument();
+    expect(screen.getByLabelText('Live system health signals').children).toHaveLength(5);
   });
 
   it('explains browser notification availability without requesting permission', () => {

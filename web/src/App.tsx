@@ -12,6 +12,7 @@ import {
   Menu,
   Maximize2,
   Minimize2,
+  Radio,
   RefreshCw,
   Settings,
   ShieldCheck,
@@ -133,8 +134,27 @@ function Brand() {
     <div className="brand" aria-label="GoodWe Home">
       <strong className="goodwe-wordmark">GOODWE</strong>
       <span className="brand-divider" aria-hidden="true" />
-      <span className="brand-name">GoodWe Home</span>
+      <span className="brand-copy">
+        <span className="brand-name">GoodWe Home</span>
+        <small>Energy command center</small>
+      </span>
     </div>
+  );
+}
+
+function ConnectionHeader() {
+  return (
+    <header className="app-header connection-header">
+      <Brand />
+      <div className="connection-header-status" aria-label="Connection properties">
+        <span className="local-pill">
+          <Radio /> Local network
+        </span>
+        <span className="read-only-pill">
+          <ShieldCheck /> Read-only
+        </span>
+      </div>
+    </header>
   );
 }
 
@@ -312,11 +332,14 @@ export function DesktopHeader({
         ))}
       </nav>
       <div className="header-actions">
-        <span className="read-only-pill">
-          <ShieldCheck /> Read-only
-        </span>
-        <RefreshPill nextRefreshAt={nextRefreshAt} connectionState={snapshot.connection.state} />
-        <HeaderClock />
+        <div className="header-status-cluster">
+          <span className="read-only-pill">
+            <ShieldCheck /> Read-only
+          </span>
+          <RefreshPill nextRefreshAt={nextRefreshAt} connectionState={snapshot.connection.state} />
+          <HeaderClock />
+        </div>
+        <span className="header-action-divider" aria-hidden="true" />
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -440,9 +463,12 @@ export default function App() {
     sensors,
     events,
     commandCenter,
+    commandCenterLoading,
     preview,
     loading,
     nextRefreshAt,
+    refreshSnapshot,
+    refreshCommandCenter,
   } = useDashboard(period, anchor, trendRange, commandHistoryRange);
   const notifications = useDesktopNotifications(events);
   useEffect(() => {
@@ -461,7 +487,21 @@ export default function App() {
     return () => document.removeEventListener('keydown', exitWithEscape);
   }, [wallMode]);
   const points = history?.points ?? [];
-  if (!snapshot) return <LoadingPage loading={loading} />;
+  if (!snapshot)
+    return (
+      <TooltipProvider delayDuration={300}>
+        <div className="app-shell connection-shell">
+          <ConnectionHeader />
+          <main className="connection-main">
+            <LoadingPage
+              loading={loading}
+              stage="collector"
+              onRetry={() => void refreshSnapshot()}
+            />
+          </main>
+        </div>
+      </TooltipProvider>
+    );
 
   const toggleWallMode = async () => {
     if (document.fullscreenElement) {
@@ -497,7 +537,11 @@ export default function App() {
           onViewAlerts={() => setPage('system')}
         />
       ) : (
-        <LoadingPage loading />
+        <LoadingPage
+          loading={commandCenterLoading}
+          stage="overview"
+          onRetry={() => void refreshCommandCenter()}
+        />
       )
     ) : page === 'history' ? (
       <HistoryPage {...sharedHistory} />
@@ -531,9 +575,17 @@ export default function App() {
         <main className="app-main">
           {preview && <Badge className="preview-pill">Preview data</Badge>}
           {connectionMessage(snapshot.connection.state) && (
-            <div className={`alert ${snapshot.connection.state}`}>
-              <span className="status-dot" />
-              {connectionMessage(snapshot.connection.state)}
+            <div className={`alert ${snapshot.connection.state}`} role="status">
+              <span className={`status-dot ${snapshot.connection.state}`} />
+              <div>
+                <strong>
+                  {snapshot.connection.state === 'offline'
+                    ? 'Live connection unavailable'
+                    : 'Live readings delayed'}
+                </strong>
+                <span>{connectionMessage(snapshot.connection.state)}</span>
+              </div>
+              <RefreshCw aria-hidden="true" />
             </div>
           )}
           <AnimatePresence mode="wait" initial={false}>
