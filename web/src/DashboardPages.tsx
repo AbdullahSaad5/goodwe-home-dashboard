@@ -52,6 +52,7 @@ import {
   PowerTrendsPanel,
   ProjectionPanel,
 } from './CommandCenterComponents';
+import { describeEvent } from './events';
 import { formatDateTime, formatNumber, formatPower, periodLabel } from './format';
 import type {
   CommandCenterResponse,
@@ -99,8 +100,9 @@ function HealthBadge({ health }: { health: Snapshot['system']['health'] }) {
   );
 }
 
-function EventList({ events, limit }: { events: EventItem[]; limit?: number }) {
+export function EventList({ events, limit }: { events: EventItem[]; limit?: number }) {
   const visible = limit ? events.slice(0, limit) : events;
+  const compact = limit != null;
   if (!visible.length)
     return (
       <EmptyState
@@ -110,25 +112,52 @@ function EventList({ events, limit }: { events: EventItem[]; limit?: number }) {
       />
     );
   return (
-    <div className="event-list">
-      {visible.map((event) => (
-        <article className={`event ${event.severity}`} key={event.id}>
-          <span className="event-icon">
-            {event.severity === 'error' ? (
-              <AlertTriangle />
-            ) : event.severity === 'warning' ? (
-              <Info />
-            ) : (
-              <CircleCheck />
-            )}
-          </span>
-          <div>
-            <strong>{event.message}</strong>
-            <small>{event.event_type}</small>
-          </div>
-          <time>{formatDateTime(event.created_at)}</time>
-        </article>
-      ))}
+    <div className={`event-list ${compact ? 'compact' : 'detailed'}`}>
+      {visible.map((event) => {
+        const presentation = describeEvent(event);
+        return (
+          <article className={`event ${event.severity}`} key={event.id}>
+            <span className="event-icon">
+              {event.severity === 'error' ? (
+                <AlertTriangle />
+              ) : event.severity === 'warning' ? (
+                <Info />
+              ) : (
+                <CircleCheck />
+              )}
+            </span>
+            <div className="event-main">
+              <div className="event-title-row">
+                <div className="event-title-copy">
+                  <span className="event-type">{presentation.typeLabel}</span>
+                  <strong>{presentation.title}</strong>
+                </div>
+                <time dateTime={event.created_at}>{formatDateTime(event.created_at)}</time>
+              </div>
+              <p className="event-summary">{presentation.summary}</p>
+              {!compact && presentation.guidance && (
+                <p className="event-guidance">
+                  <Info />
+                  <span>
+                    <strong>What this means</strong>
+                    {presentation.guidance}
+                  </span>
+                </p>
+              )}
+              {!compact && presentation.facts.length > 0 && (
+                <dl className="event-facts">
+                  {presentation.facts.map((fact) => (
+                    <div className="event-fact" key={`${event.id}-${fact.label}`}>
+                      <dt>{fact.label}</dt>
+                      <dd>{fact.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+            </div>
+          </article>
+        );
+      })}
     </div>
   );
 }

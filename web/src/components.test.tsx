@@ -18,7 +18,7 @@ import {
   PeriodControl,
   animationDuration,
 } from './DashboardComponents';
-import { LoadingPage } from './DashboardPages';
+import { EventList, LoadingPage } from './DashboardPages';
 import { demoCommandCenter, demoEvents, demoSnapshot } from './demo';
 import { TooltipProvider } from './components/ui/tooltip';
 import { todayInTimeZone } from './period';
@@ -179,6 +179,32 @@ describe('dashboard interactions', () => {
     expect(screen.getByText('Dominant supply')).toBeInTheDocument();
     expect(screen.getByText('Live now')).toBeInTheDocument();
     expect(screen.getByLabelText('Live system health signals').children).toHaveLength(5);
+  });
+
+  it('renders event history with meaning and relevant inverter facts', () => {
+    render(
+      <EventList
+        events={[
+          {
+            id: 25,
+            created_at: '2026-08-28T20:25:37.055818Z',
+            severity: 'error',
+            event_type: 'system_health',
+            message: 'The inverter reported an error',
+            details: {
+              error_code: 537002496,
+              errors: 'Utility Loss, Vac Failure, Fac Failure',
+            },
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText('Grid supply fault reported')).toBeInTheDocument();
+    expect(screen.getByText(/utility grid was unavailable/i)).toBeInTheDocument();
+    expect(screen.getByText('What this means')).toBeInTheDocument();
+    expect(screen.getByText('Reported faults')).toBeInTheDocument();
+    expect(screen.queryByText('system_health')).not.toBeInTheDocument();
   });
 
   it('explains browser notification availability without requesting permission', () => {

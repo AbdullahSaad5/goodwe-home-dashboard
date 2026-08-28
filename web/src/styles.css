@@ -1730,26 +1730,49 @@ svg {
 }
 .event {
   min-width: 0;
-  padding: 8px 0;
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) auto;
-  align-items: center;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: start;
+  gap: 11px;
+}
+.event-list.compact .event {
+  padding: 8px 0;
+  grid-template-columns: 28px minmax(0, 1fr);
   gap: 8px;
   border-bottom: 1px solid var(--line);
 }
-.event:last-child {
+.event-list.compact .event:last-child {
   border-bottom: 0;
 }
+.event-list.detailed {
+  gap: 10px;
+  padding-top: 4px;
+}
+.event-list.detailed .event {
+  padding: 15px;
+  background: #fbfcfe;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  box-shadow: 0 5px 18px rgba(15, 23, 42, 0.025);
+}
 .event-icon {
-  width: 26px;
-  height: 26px;
+  width: 34px;
+  height: 34px;
   display: grid;
   place-items: center;
   color: var(--battery);
   background: var(--battery-soft);
-  border-radius: 50%;
+  border-radius: 10px;
 }
 .event-icon svg {
+  width: 15px;
+}
+.event-list.compact .event-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+}
+.event-list.compact .event-icon svg {
   width: 13px;
 }
 .event.warning .event-icon {
@@ -1760,25 +1783,130 @@ svg {
   color: var(--danger);
   background: #fff0f0;
 }
-.event div {
+.event-main,
+.event-title-copy {
   min-width: 0;
   display: grid;
-  gap: 2px;
 }
-.event strong {
+.event-main {
+  gap: 7px;
+}
+.event-title-row {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+.event-title-copy {
+  gap: 3px;
+}
+.event-title-copy strong {
   overflow: hidden;
-  font-size: 10px;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.25;
+  font-weight: 690;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.event small {
-  color: var(--muted);
+.event-type {
+  color: var(--solar);
   font-size: 8px;
+  font-weight: 720;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 .event time {
+  padding-top: 1px;
   color: var(--muted);
-  font-size: 8px;
+  font-size: 9px;
   white-space: nowrap;
+}
+.event-summary {
+  max-width: 900px;
+  margin: 0;
+  color: #475467;
+  font-size: 10px;
+  line-height: 1.55;
+}
+.event-guidance {
+  max-width: 900px;
+  margin: 1px 0 0;
+  padding: 9px 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: #536078;
+  background: #f2f6fc;
+  border-radius: 9px;
+  font-size: 9px;
+  line-height: 1.45;
+}
+.event-guidance > svg {
+  width: 14px;
+  flex: 0 0 auto;
+  color: var(--solar);
+}
+.event-guidance > span {
+  display: grid;
+  gap: 1px;
+}
+.event-guidance strong {
+  color: #344054;
+  font-size: 9px;
+}
+.event-facts {
+  margin: 1px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.event-fact {
+  min-width: 0;
+  padding: 6px 8px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  background: #fff;
+  border: 1px solid #e7ebf1;
+  border-radius: 8px;
+}
+.event-fact dt {
+  color: var(--subtle);
+  font-size: 8px;
+  font-weight: 650;
+}
+.event-fact dd {
+  max-width: 520px;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #344054;
+  font-size: 8px;
+  font-weight: 620;
+}
+.event-list.compact .event-main {
+  gap: 3px;
+}
+.event-list.compact .event-title-copy {
+  display: block;
+}
+.event-list.compact .event-title-copy strong {
+  display: block;
+  font-size: 10px;
+}
+.event-list.compact .event-type {
+  display: none;
+}
+.event-list.compact .event-summary {
+  overflow: hidden;
+  font-size: 8px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.event-list.compact .event time {
+  font-size: 8px;
 }
 .event-footer {
   width: 100%;
@@ -2508,7 +2636,7 @@ td code {
   .flow-house {
     width: 132px;
   }
-  .event time {
+  .event-list.compact .event time {
     display: none;
   }
   .read-only-pill {
@@ -2990,6 +3118,29 @@ td code {
   }
   .raw-tools select {
     width: 100%;
+  }
+  .event-list.detailed .event {
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 9px;
+    padding: 12px;
+  }
+  .event-list.detailed .event-icon {
+    width: 28px;
+    height: 28px;
+  }
+  .event-list.detailed .event-title-row {
+    flex-direction: column;
+    gap: 4px;
+  }
+  .event-list.detailed .event-title-copy strong {
+    white-space: normal;
+  }
+  .event-list.detailed .event time {
+    display: block;
+  }
+  .event-list.detailed .event-fact {
+    width: 100%;
+    justify-content: space-between;
   }
   .panel:has(.raw-tools) .panel-heading {
     flex-direction: column;
