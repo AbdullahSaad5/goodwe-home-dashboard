@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Changed
 
+- Updated pytest, Lucide, React, React DOM, React types, Vite's React plugin, and TypeScript as one compatibility-checked dependency set; grouped future React updates and deferred unsupported TypeScript releases.
 - Separated the Python service into `server/` and the React application into `web/`.
 - Isolated inverter discovery behind a dedicated backend module.
 - Improved the responsive dashboard and connecting experience while retaining the GoodWe Home product name and existing visual system.

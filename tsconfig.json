@@ -13,7 +13,6 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "moduleDetection": "force",
-    "baseUrl": ".",
     "paths": { "@/*": ["./web/src/*"] }
   },
   "include": ["web/src", "vite.config.ts", "vitest.config.ts", "eslint.config.js"],
