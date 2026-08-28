@@ -139,6 +139,8 @@ describe('dashboard interactions', () => {
   it('explains the safe local connection while waiting for telemetry', () => {
     render(<LoadingPage loading stage="collector" />);
     expect(screen.getByRole('heading', { name: 'Connecting to GoodWe Home' })).toBeInTheDocument();
+    expect(screen.getByText('GoodWe Home')).toBeInTheDocument();
+    expect(screen.queryByText('Local energy link')).not.toBeInTheDocument();
     expect(screen.getByText('Read-only by design')).toBeInTheDocument();
     expect(
       screen.getByText('No inverter commands are sent and telemetry stays on your network.'),

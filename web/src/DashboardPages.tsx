@@ -1044,7 +1044,7 @@ export function LoadingPage({
             <Activity />
             <span />
           </div>
-          <p>Local energy link</p>
+          <p>GoodWe Home</p>
         </div>
 
         <div className="connection-copy">
