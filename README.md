@@ -158,7 +158,7 @@ The collector broadcasts each new inverter snapshot over Server-Sent Events. The
 
 Aggregate-backed chart responses merge retained live samples after the latest completed hourly rollup. This keeps 24-hour Power Trends and week, month, and year charts current between rollup runs, including newly detected outage shading.
 
-Refreshing data does not reset an active chart zoom. Changing a trend range, history period, or anchor date intentionally opens the new selection at its full extent.
+Refreshing data does not reset an active chart zoom. Changing a trend range, history period, or anchor date intentionally opens the new selection at its full extent without replaying the line-drawing animation.
 
 ## Architecture
 

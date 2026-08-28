@@ -13,8 +13,16 @@ describe('chart refresh state', () => {
     });
   });
 
-  it('animates the initial chart but not incoming data refreshes', () => {
+  it('does not replay line drawing when a time selection remounts the chart', () => {
     expect(chartAnimationOptions(false)).toEqual({
+      animation: false,
+      animationDuration: 0,
+      animationDurationUpdate: 0,
+    });
+  });
+
+  it('allows charts without time controls to opt into a one-time entrance animation', () => {
+    expect(chartAnimationOptions(false, true)).toMatchObject({
       animation: true,
       animationDuration: 320,
       animationDurationUpdate: 0,

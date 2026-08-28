@@ -31,7 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Initialized header clocks and refresh countdowns at component mount so long-running sessions cannot inherit a stale module-load timestamp.
 - Synchronized Power Trends, calendar charts, summaries, sensors, events, and Command Center intelligence with each live snapshot, with a coordinated 60-second fallback refresh.
 - Preserved ECharts zoom windows when refreshed points arrive while still resetting charts for intentional range, period, or anchor-date changes.
-- Prevented live chart refreshes from replaying the initial line-drawing animation.
+- Prevented live chart refreshes and time-selection changes from replaying the initial line-drawing animation.
 - Exposed stored inverter fault details and meanings instead of internal event keys and generic error messages.
 - Prevented the initial connecting experience from remaining stuck when collector data becomes available.
 

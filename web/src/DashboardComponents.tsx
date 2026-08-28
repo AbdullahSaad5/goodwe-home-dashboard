@@ -54,10 +54,11 @@ export function animationDuration(reduceMotion: boolean | null, duration: number
   return reduceMotion ? 0 : duration;
 }
 
-export function chartAnimationOptions(reduceMotion: boolean | null) {
+export function chartAnimationOptions(reduceMotion: boolean | null, animateInitial = false) {
+  const animation = animateInitial && !reduceMotion;
   return {
-    animation: !reduceMotion,
-    animationDuration: animationDuration(reduceMotion, 320),
+    animation,
+    animationDuration: animation ? 320 : 0,
     animationDurationUpdate: 0,
   };
 }
@@ -563,7 +564,7 @@ export function ProjectionChart({
     { name: 'SOC', color: palette.soc, key: 'soc_pct', axis: 1 },
   ] as const;
   const option: echarts.EChartsCoreOption = {
-    ...chartAnimationOptions(reduceMotion),
+    ...chartAnimationOptions(reduceMotion, true),
     aria: { enabled: true, decal: { show: false } },
     color: series.map((item) => item.color),
     grid: { top: 18, right: 50, bottom: 42, left: 52 },

@@ -58,7 +58,7 @@ Vite treats `web/` as its source root and writes the production bundle to `web/d
 
 `useDashboard.ts` treats each valid SSE snapshot as the live refresh signal. It applies the snapshot immediately and concurrently refreshes the selected history and comparison summaries, Command Center response, raw sensors, and events. The same coordinator runs every 60 seconds as a fallback when SSE delivery is delayed or disconnected. Request revisions prevent an older history response from replacing a newer selection.
 
-ECharts updates within the same range replace series data without replacing the chart's `dataZoom` component. This preserves a user's zoom window as new points arrive. Power Trends is keyed by its quick range, while History, Solar, Battery, and Grid charts are keyed by period and anchor date; changing one of those controls intentionally creates a fresh full-range chart.
+ECharts updates within the same range replace series data without replacing the chart's `dataZoom` component. This preserves a user's zoom window as new points arrive. Power Trends is keyed by its quick range, while History, Solar, Battery, and Grid charts are keyed by period and anchor date; changing one of those controls intentionally creates a fresh full-range chart with line animation disabled.
 
 ### Frontend appearance
 
@@ -90,7 +90,7 @@ An inline bootstrap in `web/index.html` resolves the saved appearance or the fir
 - SQLite migrations are versioned and preserve a one-time pre-migration backup.
 - A visible live refresh must update every dependent frontend dataset, not only snapshot cards.
 - Aggregate-backed history must include retained telemetry newer than the latest completed rollup.
-- Same-context chart refreshes must preserve user-controlled zoom; explicit range, period, or date changes reset it.
+- Same-context chart refreshes must preserve user-controlled zoom; explicit range, period, or date changes reset it without animating the replacement series.
 - Light and dark modes preserve the same semantic solar, load, battery, grid, warning, and error meanings.
 
 ## Extension points
