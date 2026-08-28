@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
 
 :root {
   font-family:
@@ -3292,5 +3293,286 @@ td code {
   }
   .solar-line .flow-arrow {
     top: 50%;
+  }
+}
+
+/* Dark mode keeps the same information hierarchy while lowering glare and preserving status hues. */
+html[data-theme='dark'] {
+  color-scheme: dark;
+  color: #e7edf7;
+  background: #0b1220;
+  --canvas: #0b1220;
+  --panel: #111b2b;
+  --text: #e7edf7;
+  --muted: #a5b1c3;
+  --subtle: #78879d;
+  --line: #29384d;
+  --solar: #6ea8ff;
+  --solar-soft: #172d4c;
+  --home: #fb923c;
+  --home-soft: #3a2619;
+  --battery: #55d596;
+  --battery-soft: #173728;
+  --grid: #b19afc;
+  --grid-soft: #2d2548;
+  --danger: #ff7479;
+  --brand: #ff4545;
+}
+
+[data-theme='dark'] body {
+  background: radial-gradient(circle at 50% -10%, #16243a 0, #0e1828 36%, var(--canvas) 72%);
+}
+
+[data-theme='dark'] .app-header {
+  background: rgba(11, 18, 32, 0.92);
+  box-shadow: 0 5px 28px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme='dark'] .desktop-nav {
+  background: #152033;
+}
+
+[data-theme='dark'] .nav-button {
+  color: #b5c0d1;
+}
+
+[data-theme='dark'] .nav-button:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+[data-theme='dark'] .nav-button.active {
+  color: #fff;
+  background: linear-gradient(135deg, #3977f5, #2563eb);
+}
+
+[data-theme='dark'] .read-only-pill,
+[data-theme='dark'] .header-clock,
+[data-theme='dark'] .local-pill,
+[data-theme='dark'] .refresh-pill {
+  color: #b5c0d1;
+  background: #141f31;
+  border-color: #2b3b52;
+}
+
+[data-theme='dark'] .refresh-pill strong,
+[data-theme='dark'] .header-icon,
+[data-theme='dark'] .date-control,
+[data-theme='dark'] .date-arrow,
+[data-theme='dark'] .date-control svg,
+[data-theme='dark'] .system-state,
+[data-theme='dark'] .daily-title,
+[data-theme='dark'] .event-summary,
+[data-theme='dark'] .event-guidance,
+[data-theme='dark'] .event-guidance strong,
+[data-theme='dark'] .event-fact dd,
+[data-theme='dark'] .connection-steps strong,
+[data-theme='dark'] .connection-assurance strong,
+[data-theme='dark'] .health-signal-copy span,
+[data-theme='dark'] .reserve-layout > div,
+[data-theme='dark'] .trend-table th,
+[data-theme='dark'] .trend-table td,
+[data-theme='dark'] .readiness span {
+  color: #c6d0df;
+}
+
+[data-theme='dark'] .header-icon:hover {
+  color: var(--solar);
+  background: var(--solar-soft);
+}
+
+[data-theme='dark'] .avatar {
+  color: #9ac0ff;
+  background: #1a3154;
+}
+
+[data-theme='dark'] .event-count {
+  border-color: #0b1220;
+}
+
+[data-theme='dark'] .refresh-pill.stale,
+[data-theme='dark'] .alert,
+[data-theme='dark'] .preview-pill {
+  color: #f5ca6b;
+  background: #362b16;
+  border-color: #675225;
+}
+
+[data-theme='dark'] .alert strong,
+[data-theme='dark'] .alert > div > span,
+[data-theme='dark'] .alert > svg {
+  color: #f5ca6b;
+}
+
+[data-theme='dark'] .refresh-pill.offline,
+[data-theme='dark'] .alert.offline {
+  color: #ff9a9e;
+  background: #391d25;
+  border-color: #71343e;
+}
+
+[data-theme='dark'] .alert.offline strong,
+[data-theme='dark'] .alert.offline > div > span,
+[data-theme='dark'] .alert.offline > svg {
+  color: #ff9a9e;
+}
+
+[data-theme='dark'] .panel,
+[data-theme='dark'] .live-metric,
+[data-theme='dark'] .stat-card,
+[data-theme='dark'] .daily-card,
+[data-theme='dark'] .health-signal,
+[data-theme='dark'] .command-footer-strip {
+  background: rgba(17, 27, 43, 0.97);
+  border-color: var(--line);
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme='dark'] .command-banner {
+  background:
+    radial-gradient(circle at 82% 18%, rgba(85, 213, 150, 0.12), transparent 25%),
+    linear-gradient(118deg, #152846, #111b2b 58%, #132b25);
+  border-color: #30455f;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.22);
+}
+
+[data-theme='dark'] .command-banner-icon,
+[data-theme='dark'] .command-banner-power,
+[data-theme='dark'] .mix-ring > div,
+[data-theme='dark'] .flow-icon {
+  background: #17243a;
+  border-color: #30445e;
+}
+
+[data-theme='dark'] .command-banner-icon,
+[data-theme='dark'] .flow-icon {
+  border-color: currentColor;
+}
+
+[data-theme='dark'] .command-banner-power {
+  border-color: rgba(138, 162, 193, 0.2);
+}
+
+[data-theme='dark'] .health-signal:hover {
+  border-color: #41536a;
+}
+
+[data-theme='dark'] .table-toggle,
+[data-theme='dark'] .date-control,
+[data-theme='dark'] .raw-tools select {
+  color: #c6d0df;
+  background: #152033;
+  border-color: var(--line);
+}
+
+[data-theme='dark'] .segmented {
+  background: #152033;
+}
+
+[data-theme='dark'] .trend-table th,
+[data-theme='dark'] th,
+[data-theme='dark'] .records-grid article,
+[data-theme='dark'] .peaks-grid article,
+[data-theme='dark'] .forecast-grid article,
+[data-theme='dark'] .watchdog-list article,
+[data-theme='dark'] .summary-counter-grid article,
+[data-theme='dark'] .thermal-readings article,
+[data-theme='dark'] .outage-heatmap,
+[data-theme='dark'] .readiness,
+[data-theme='dark'] .search,
+[data-theme='dark'] .dialog-read-only,
+[data-theme='dark'] .more-grid .nav-button,
+[data-theme='dark'] .event-list.detailed .event,
+[data-theme='dark'] .event-guidance,
+[data-theme='dark'] .event-fact,
+[data-theme='dark'] .connection-steps li {
+  background: #152033;
+  border-color: var(--line);
+}
+
+[data-theme='dark'] .readiness.ready {
+  background: #142f25;
+  border-color: #2a6449;
+}
+
+[data-theme='dark'] .readiness.stale,
+[data-theme='dark'] .readiness.collecting,
+[data-theme='dark'] .watchdog-list article.warning {
+  background: #332a17;
+  border-color: #675326;
+}
+
+[data-theme='dark'] .readiness.unavailable,
+[data-theme='dark'] .watchdog-list article.error {
+  background: #381d24;
+  border-color: #6d333d;
+}
+
+[data-theme='dark'] .event.warning .event-icon,
+[data-theme='dark'] .connection-steps li.waiting > span,
+[data-theme='dark'] .health-badge.warning {
+  color: #f5c45b;
+  background: #3b2f16;
+}
+
+[data-theme='dark'] .event.error .event-icon,
+[data-theme='dark'] .health-badge.error,
+[data-theme='dark'] .comparison.negative {
+  color: #ff8e92;
+  background: #3a1e25;
+}
+
+[data-theme='dark'] .comparison.positive,
+[data-theme='dark'] .health-badge,
+[data-theme='dark'] .connection-steps li.complete > span {
+  color: #6ce0a5;
+  background: #173628;
+  border-color: #2b6048;
+}
+
+[data-theme='dark'] .category-pill {
+  color: #b8c5d7;
+  background: #253247;
+}
+
+[data-theme='dark'] .connection-card {
+  background: rgba(17, 27, 43, 0.96);
+  border-color: #304057;
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.34),
+    0 2px 8px rgba(0, 0, 0, 0.22);
+}
+
+[data-theme='dark'] .connection-progress {
+  background: #253247;
+}
+
+[data-theme='dark'] .connection-steps li > span {
+  background: #253247;
+}
+
+[data-theme='dark'] .connection-steps li.active {
+  color: #8db8ff;
+  background: #172d4c;
+  border-color: #31568b;
+}
+
+[data-theme='dark'] .connection-steps li.active > span {
+  background: #1b3559;
+}
+
+[data-theme='dark'] .more-grid .nav-button.active {
+  color: #fff;
+  background: var(--solar);
+}
+
+[data-theme='dark'] .mobile-nav {
+  background: rgba(11, 18, 32, 0.95);
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.24);
+}
+
+@media (max-width: 820px) {
+  .header-icon.theme-toggle {
+    display: inline-flex;
   }
 }

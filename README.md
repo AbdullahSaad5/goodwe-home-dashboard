@@ -31,7 +31,8 @@ It is read-only by design. The dashboard never changes inverter settings, operat
 - Operational 15-minute to 24-hour trends with outage shading and table mode
 - Optional calibrated solar forecast, learned load profile, and 24-hour SOC projection
 - Debounced outage history, timestamped daily peaks, records, and advisory watchdogs
-- Light full-screen wall mode and opt-in foreground desktop notifications
+- Persistent light/dark appearance with first-visit system preference and a light or dark full-screen wall mode
+- Opt-in foreground desktop notifications
 
 ## Quick start
 
@@ -109,6 +110,8 @@ DASHBOARD_TIMEZONE=America/Toronto PORT=8080 ./start.sh
 | Grid & Loads | Import/export, voltage, frequency, apparent power, reactive power, and meter state                                    |
 | System       | Inverter health, firmware, clocks, temperatures, registers, and local events                                          |
 | Raw Data     | Searchable access to every sensor returned by the inverter                                                            |
+
+Use the sun/moon control in the header to switch appearance. The dashboard follows the browser or operating-system preference on first visit, then stores an explicit choice in that browser. The selected appearance also applies to charts, menus, the connecting experience, responsive navigation, and wall mode.
 
 ## Data storage
 

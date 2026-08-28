@@ -18,14 +18,14 @@ export function DialogContent({
       <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-slate-950/35 backdrop-blur-[3px]" />
       <DialogPrimitive.Content
         className={cn(
-          'fixed inset-x-3 bottom-3 z-50 rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl outline-none',
+          'fixed inset-x-3 bottom-3 z-50 rounded-2xl border border-slate-200 bg-white p-5 text-slate-950 shadow-2xl outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100',
           className,
         )}
         {...props}
       >
         {children}
         <DialogPrimitive.Close
-          className="absolute right-4 top-4 grid size-9 place-items-center rounded-full border border-slate-200 text-slate-500 hover:bg-slate-50"
+          className="absolute right-4 top-4 grid size-9 place-items-center rounded-full border border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
           aria-label="Close"
         >
           <X className="size-4" />

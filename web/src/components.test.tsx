@@ -5,6 +5,7 @@ import {
   DesktopHeader,
   MobileNavigation,
   RefreshPill,
+  ThemeToggle,
   connectionMessage,
   isWallModeExitKey,
   notificationAvailability,
@@ -90,6 +91,8 @@ describe('dashboard interactions', () => {
           onToggleWallMode={vi.fn()}
           notificationStatus="default"
           onEnableNotifications={enableNotifications}
+          theme="light"
+          onToggleTheme={vi.fn()}
         />
       </TooltipProvider>,
     );
@@ -118,6 +121,29 @@ describe('dashboard interactions', () => {
   it('turns chart animation off for reduced-motion users', () => {
     expect(animationDuration(true, 320)).toBe(0);
     expect(animationDuration(false, 320)).toBe(320);
+  });
+
+  it('offers an accessible light and dark mode toggle', async () => {
+    const onToggle = vi.fn();
+    const view = render(
+      <TooltipProvider>
+        <ThemeToggle theme="light" onToggle={onToggle} />
+      </TooltipProvider>,
+    );
+    const toggle = screen.getByRole('button', { name: 'Dark mode' });
+    expect(toggle).toHaveAttribute('aria-pressed', 'false');
+    await userEvent.click(toggle);
+    expect(onToggle).toHaveBeenCalledOnce();
+
+    view.rerender(
+      <TooltipProvider>
+        <ThemeToggle theme="dark" onToggle={onToggle} />
+      </TooltipProvider>,
+    );
+    expect(screen.getByRole('button', { name: 'Dark mode' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
   });
 
   it('shows the live refresh countdown in the header', () => {

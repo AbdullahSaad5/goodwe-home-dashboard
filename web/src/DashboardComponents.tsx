@@ -33,6 +33,7 @@ import { Button } from '@/components/ui/button';
 import type { HistoryPoint, Period, ProjectionPoint, Snapshot } from './types';
 import { formatNumber, formatPower, formatTime } from './format';
 import { readableAnchor, shiftAnchor, todayInTimeZone } from './period';
+import { chartTheme, useTheme } from './theme';
 import { palette, type LiveMetric, type SolarUse } from './ui';
 
 echarts.use([
@@ -390,6 +391,7 @@ export function EnergyChart({
   showSoc?: boolean;
 }) {
   const reduceMotion = useReducedMotion();
+  const colors = chartTheme[useTheme()];
   const definitions: SeriesDefinition[] =
     kind === 'solar'
       ? [{ key: 'pv_w', name: 'Solar', color: palette.solar, area: true }]
@@ -438,13 +440,13 @@ export function EnergyChart({
     tooltip: {
       trigger: 'axis',
       confine: true,
-      backgroundColor: '#ffffff',
-      borderColor: '#e2e8f0',
+      backgroundColor: colors.tooltipBackground,
+      borderColor: colors.tooltipBorder,
       borderWidth: 1,
-      textStyle: { color: '#172033', fontSize: 12 },
+      textStyle: { color: colors.tooltipText, fontSize: 12 },
       extraCssText:
         'box-shadow:0 14px 34px rgba(15,23,42,.12);border-radius:12px;padding:12px 14px;',
-      axisPointer: { type: 'line', lineStyle: { color: '#94a3b8', type: 'dashed' } },
+      axisPointer: { type: 'line', lineStyle: { color: colors.tooltipSubtle, type: 'dashed' } },
       formatter: (raw: unknown) => {
         const params = raw as Array<{ seriesName: string; color: string; value: [number, number] }>;
         if (!params.length) return '';
@@ -456,7 +458,7 @@ export function EnergyChart({
             const rendered = isSoc
               ? `${formatNumber(value, 0)}%`
               : `${value > 0 && ['Battery', 'Grid'].includes(item.seriesName) ? '+' : ''}${formatNumber(value, 2)} kW`;
-            return `<div style="display:flex;align-items:center;gap:8px;margin-top:8px"><i style="width:8px;height:8px;border-radius:50%;background:${item.color}"></i><span style="min-width:55px;color:#64748b">${item.seriesName}</span><strong>${rendered}</strong>${direction ? `<small style="color:#94a3b8">${direction}</small>` : ''}</div>`;
+            return `<div style="display:flex;align-items:center;gap:8px;margin-top:8px"><i style="width:8px;height:8px;border-radius:50%;background:${item.color}"></i><span style="min-width:55px;color:${colors.tooltipMuted}">${item.seriesName}</span><strong>${rendered}</strong>${direction ? `<small style="color:${colors.tooltipSubtle}">${direction}</small>` : ''}</div>`;
           })
           .join('');
         return `<strong>${formatTime(new Date(params[0].value[0]).toISOString())}</strong>${rows}`;
@@ -464,20 +466,20 @@ export function EnergyChart({
     },
     xAxis: {
       type: 'time',
-      axisLine: { lineStyle: { color: '#dfe5ed' } },
+      axisLine: { lineStyle: { color: colors.axis } },
       axisTick: { show: false },
-      axisLabel: { color: '#667085', fontSize: 10 },
+      axisLabel: { color: colors.label, fontSize: 10 },
       splitLine: { show: false },
     },
     yAxis: [
       {
         type: 'value',
         name: 'kW',
-        nameTextStyle: { color: '#667085', align: 'right' },
-        axisLabel: { color: '#667085', fontSize: 10, formatter: '{value} kW' },
+        nameTextStyle: { color: colors.label, align: 'right' },
+        axisLabel: { color: colors.label, fontSize: 10, formatter: '{value} kW' },
         axisLine: { show: false },
         axisTick: { show: false },
-        splitLine: { lineStyle: { color: '#e8edf4', type: 'dashed' } },
+        splitLine: { lineStyle: { color: colors.grid, type: 'dashed' } },
       },
       {
         type: 'value',
@@ -485,7 +487,7 @@ export function EnergyChart({
         min: 0,
         max: 100,
         show: kind === 'battery' || showSoc,
-        axisLabel: { color: '#667085', fontSize: 10, formatter: '{value}%' },
+        axisLabel: { color: colors.label, fontSize: 10, formatter: '{value}%' },
         splitLine: { show: false },
       },
     ],
@@ -504,7 +506,7 @@ export function EnergyChart({
             opacity: 0.11,
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
               { offset: 0, color: item.color },
-              { offset: 1, color: '#ffffff' },
+              { offset: 1, color: colors.areaEnd },
             ]),
           }
         : undefined,
@@ -513,7 +515,7 @@ export function EnergyChart({
           ? {
               silent: true,
               symbol: 'none',
-              lineStyle: { color: '#cbd5e1', width: 1 },
+              lineStyle: { color: colors.zero, width: 1 },
               data: [{ yAxis: 0 }],
             }
           : undefined,
@@ -552,6 +554,7 @@ export function ProjectionChart({
   height?: number;
 }) {
   const reduceMotion = useReducedMotion();
+  const colors = chartTheme[useTheme()];
   if (!points.length)
     return <EmptyState title="No projection yet" detail="Projection data is still collecting." />;
   const series = [
@@ -565,27 +568,34 @@ export function ProjectionChart({
     color: series.map((item) => item.color),
     grid: { top: 18, right: 50, bottom: 42, left: 52 },
     legend: { show: false },
-    tooltip: { trigger: 'axis', confine: true },
+    tooltip: {
+      trigger: 'axis',
+      confine: true,
+      backgroundColor: colors.tooltipBackground,
+      borderColor: colors.tooltipBorder,
+      textStyle: { color: colors.tooltipText },
+      axisPointer: { lineStyle: { color: colors.tooltipSubtle, type: 'dashed' } },
+    },
     xAxis: {
       type: 'time',
-      axisLine: { lineStyle: { color: '#dfe5ed' } },
+      axisLine: { lineStyle: { color: colors.axis } },
       axisTick: { show: false },
-      axisLabel: { color: '#667085', fontSize: 10 },
+      axisLabel: { color: colors.label, fontSize: 10 },
       splitLine: { show: false },
     },
     yAxis: [
       {
         type: 'value',
         name: 'kW',
-        axisLabel: { color: '#667085', fontSize: 10, formatter: '{value} kW' },
-        splitLine: { lineStyle: { color: '#e8edf4', type: 'dashed' } },
+        axisLabel: { color: colors.label, fontSize: 10, formatter: '{value} kW' },
+        splitLine: { lineStyle: { color: colors.grid, type: 'dashed' } },
       },
       {
         type: 'value',
         name: 'SOC',
         min: 0,
         max: 100,
-        axisLabel: { color: '#667085', fontSize: 10, formatter: '{value}%' },
+        axisLabel: { color: colors.label, fontSize: 10, formatter: '{value}%' },
         splitLine: { show: false },
       },
     ],
@@ -800,6 +810,7 @@ export function LiveFlowCard({ snapshot }: { snapshot: Snapshot }) {
 
 export function SolarUseChart({ data }: { data: SolarUse }) {
   const reduceMotion = useReducedMotion();
+  const colors = chartTheme[useTheme()];
   if (data.retainedPct == null || data.exportedPct == null)
     return (
       <EmptyState
@@ -811,14 +822,20 @@ export function SolarUseChart({ data }: { data: SolarUse }) {
   const option: echarts.EChartsCoreOption = {
     animation: !reduceMotion,
     animationDuration: animationDuration(reduceMotion, 300),
-    tooltip: { trigger: 'item', valueFormatter: (value: number) => `${formatNumber(value)}%` },
+    tooltip: {
+      trigger: 'item',
+      backgroundColor: colors.tooltipBackground,
+      borderColor: colors.tooltipBorder,
+      textStyle: { color: colors.tooltipText },
+      valueFormatter: (value: number) => `${formatNumber(value)}%`,
+    },
     series: [
       {
         type: 'pie',
         radius: ['62%', '84%'],
         center: ['50%', '48%'],
         label: { show: false },
-        itemStyle: { borderColor: '#fff', borderWidth: 3, borderRadius: 5 },
+        itemStyle: { borderColor: colors.pieBorder, borderWidth: 3, borderRadius: 5 },
         data: [
           { name: 'Kept at home', value: data.retainedPct, itemStyle: { color: palette.battery } },
           { name: 'Exported', value: data.exportedPct, itemStyle: { color: palette.solar } },
@@ -832,7 +849,7 @@ export function SolarUseChart({ data }: { data: SolarUse }) {
         top: '39%',
         style: {
           text: `${formatNumber(data.retainedPct, 0)}%`,
-          fill: '#172033',
+          fill: colors.tooltipText,
           fontSize: 27,
           fontWeight: 650,
         },
@@ -841,7 +858,7 @@ export function SolarUseChart({ data }: { data: SolarUse }) {
         type: 'text',
         left: 'center',
         top: '56%',
-        style: { text: 'retained', fill: '#667085', fontSize: 10 },
+        style: { text: 'retained', fill: colors.label, fontSize: 10 },
       },
     ],
   };

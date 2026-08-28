@@ -12,6 +12,7 @@ import {
   Menu,
   Maximize2,
   Minimize2,
+  Moon,
   Radio,
   RefreshCw,
   Settings,
@@ -49,6 +50,7 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { since } from './format';
 import { todayInTimeZone } from './period';
+import { ThemeProvider, persistTheme, readStoredTheme, resolveTheme, type Theme } from './theme';
 import type { CommandHistoryRange, EventItem, Page, Period, Snapshot, TrendRange } from './types';
 import { useDashboard } from './useDashboard';
 
@@ -70,7 +72,6 @@ export const navigation: NavigationItem[] = [
 const rawItem: NavigationItem = { page: 'raw', label: 'Raw Data', icon: Database };
 const mobilePrimary = navigation.slice(0, 4);
 const mobileMore = [...navigation.slice(4), rawItem];
-const initialClockTime = Date.now();
 
 export type NotificationAvailability =
   'unsupported' | 'insecure' | 'default' | 'denied' | 'granted';
@@ -142,7 +143,28 @@ function Brand() {
   );
 }
 
-function ConnectionHeader() {
+export function ThemeToggle({ theme, onToggle }: { theme: Theme; onToggle: () => void }) {
+  const nextTheme = theme === 'light' ? 'dark' : 'light';
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="header-icon theme-toggle"
+          onClick={onToggle}
+          aria-label="Dark mode"
+          aria-pressed={theme === 'dark'}
+        >
+          {theme === 'light' ? <Moon /> : <Sun />}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>{`Switch to ${nextTheme} mode`}</TooltipContent>
+    </Tooltip>
+  );
+}
+
+function ConnectionHeader({ theme, onToggleTheme }: { theme: Theme; onToggleTheme: () => void }) {
   return (
     <header className="app-header connection-header">
       <Brand />
@@ -153,6 +175,7 @@ function ConnectionHeader() {
         <span className="read-only-pill">
           <ShieldCheck /> Read-only
         </span>
+        <ThemeToggle theme={theme} onToggle={onToggleTheme} />
       </div>
     </header>
   );
@@ -249,7 +272,7 @@ export function RefreshPill({
   nextRefreshAt: number;
   connectionState: Snapshot['connection']['state'];
 }) {
-  const [now, setNow] = useState(initialClockTime);
+  const [now, setNow] = useState(() => Date.now());
   const seconds = refreshCountdown(nextRefreshAt, now);
   const waiting = seconds === 0;
   const action = connectionState === 'live' ? 'Refresh' : 'Retry';
@@ -279,7 +302,7 @@ export function RefreshPill({
 }
 
 function HeaderClock() {
-  const [now, setNow] = useState(initialClockTime);
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
@@ -306,6 +329,8 @@ export function DesktopHeader({
   onToggleWallMode,
   notificationStatus,
   onEnableNotifications,
+  theme,
+  onToggleTheme,
 }: {
   page: Page;
   setPage: (page: Page) => void;
@@ -316,6 +341,8 @@ export function DesktopHeader({
   onToggleWallMode: () => void;
   notificationStatus: NotificationAvailability;
   onEnableNotifications: () => void;
+  theme: Theme;
+  onToggleTheme: () => void;
 }) {
   const eventCount = events.filter((event) => event.severity !== 'info').length;
   return (
@@ -340,6 +367,7 @@ export function DesktopHeader({
           <HeaderClock />
         </div>
         <span className="header-action-divider" aria-hidden="true" />
+        <ThemeToggle theme={theme} onToggle={onToggleTheme} />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -451,6 +479,12 @@ export function connectionMessage(state: 'starting' | 'live' | 'stale' | 'offlin
 }
 
 export default function App() {
+  const [theme, setTheme] = useState<Theme>(() =>
+    resolveTheme(
+      document.documentElement.dataset.theme ?? readStoredTheme(),
+      window.matchMedia('(prefers-color-scheme: dark)').matches,
+    ),
+  );
   const [page, setPage] = useState<Page>('overview');
   const [period, setPeriod] = useState<Period>('day');
   const [anchor, setAnchor] = useState(() => todayInTimeZone());
@@ -474,6 +508,19 @@ export default function App() {
   } = useDashboard(period, anchor, trendRange, commandHistoryRange);
   const notifications = useDesktopNotifications(events);
   useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+    document.documentElement.style.colorScheme = theme;
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute('content', theme === 'dark' ? '#0b1220' : '#f7f9fc');
+  }, [theme]);
+  const toggleTheme = () => {
+    const nextTheme = theme === 'light' ? 'dark' : 'light';
+    persistTheme(nextTheme);
+    setTheme(nextTheme);
+  };
+  useEffect(() => {
     const update = () => setWallMode(Boolean(document.fullscreenElement));
     document.addEventListener('fullscreenchange', update);
     return () => document.removeEventListener('fullscreenchange', update);
@@ -491,18 +538,20 @@ export default function App() {
   const points = history?.points ?? [];
   if (!snapshot)
     return (
-      <TooltipProvider delayDuration={300}>
-        <div className="app-shell connection-shell">
-          <ConnectionHeader />
-          <main className="connection-main">
-            <LoadingPage
-              loading={loading}
-              stage="collector"
-              onRetry={() => void refreshSnapshot()}
-            />
-          </main>
-        </div>
-      </TooltipProvider>
+      <ThemeProvider theme={theme}>
+        <TooltipProvider delayDuration={300}>
+          <div className="app-shell connection-shell">
+            <ConnectionHeader theme={theme} onToggleTheme={toggleTheme} />
+            <main className="connection-main">
+              <LoadingPage
+                loading={loading}
+                stage="collector"
+                onRetry={() => void refreshSnapshot()}
+              />
+            </main>
+          </div>
+        </TooltipProvider>
+      </ThemeProvider>
     );
 
   const toggleWallMode = async () => {
@@ -560,51 +609,55 @@ export default function App() {
     );
 
   return (
-    <TooltipProvider delayDuration={300}>
-      <div className={`app-shell ${wallMode ? 'wall-mode' : ''}`}>
-        <DesktopHeader
-          page={page}
-          setPage={setPage}
-          snapshot={snapshot}
-          events={events}
-          nextRefreshAt={nextRefreshAt}
-          wallMode={wallMode}
-          onToggleWallMode={() => void toggleWallMode()}
-          notificationStatus={notifications.availability}
-          onEnableNotifications={() => void notifications.enable()}
-        />
+    <ThemeProvider theme={theme}>
+      <TooltipProvider delayDuration={300}>
+        <div className={`app-shell ${wallMode ? 'wall-mode' : ''}`}>
+          <DesktopHeader
+            page={page}
+            setPage={setPage}
+            snapshot={snapshot}
+            events={events}
+            nextRefreshAt={nextRefreshAt}
+            wallMode={wallMode}
+            onToggleWallMode={() => void toggleWallMode()}
+            notificationStatus={notifications.availability}
+            onEnableNotifications={() => void notifications.enable()}
+            theme={theme}
+            onToggleTheme={toggleTheme}
+          />
 
-        <main className="app-main">
-          {preview && <Badge className="preview-pill">Preview data</Badge>}
-          {connectionMessage(snapshot.connection.state) && (
-            <div className={`alert ${snapshot.connection.state}`} role="status">
-              <span className={`status-dot ${snapshot.connection.state}`} />
-              <div>
-                <strong>
-                  {snapshot.connection.state === 'offline'
-                    ? 'Live connection unavailable'
-                    : 'Live readings delayed'}
-                </strong>
-                <span>{connectionMessage(snapshot.connection.state)}</span>
+          <main className="app-main">
+            {preview && <Badge className="preview-pill">Preview data</Badge>}
+            {connectionMessage(snapshot.connection.state) && (
+              <div className={`alert ${snapshot.connection.state}`} role="status">
+                <span className={`status-dot ${snapshot.connection.state}`} />
+                <div>
+                  <strong>
+                    {snapshot.connection.state === 'offline'
+                      ? 'Live connection unavailable'
+                      : 'Live readings delayed'}
+                  </strong>
+                  <span>{connectionMessage(snapshot.connection.state)}</span>
+                </div>
+                <RefreshCw aria-hidden="true" />
               </div>
-              <RefreshCw aria-hidden="true" />
-            </div>
-          )}
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={page}
-              className="page"
-              initial={reduceMotion ? false : { opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={reduceMotion ? { opacity: 1 } : { opacity: 0, y: -4 }}
-              transition={{ duration: reduceMotion ? 0 : 0.2, ease: 'easeOut' }}
-            >
-              {content}
-            </motion.div>
-          </AnimatePresence>
-        </main>
-        <MobileNavigation page={page} setPage={setPage} />
-      </div>
-    </TooltipProvider>
+            )}
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.div
+                key={page}
+                className="page"
+                initial={reduceMotion ? false : { opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={reduceMotion ? { opacity: 1 } : { opacity: 0, y: -4 }}
+                transition={{ duration: reduceMotion ? 0 : 0.2, ease: 'easeOut' }}
+              >
+                {content}
+              </motion.div>
+            </AnimatePresence>
+          </main>
+          <MobileNavigation page={page} setPage={setPage} />
+        </div>
+      </TooltipProvider>
+    </ThemeProvider>
   );
 }
