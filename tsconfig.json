@@ -12,10 +12,10 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
-    "moduleDetection": "force"
-    ,"baseUrl": "."
-    ,"paths": { "@/*": ["./src/*"] }
+    "moduleDetection": "force",
+    "baseUrl": ".",
+    "paths": { "@/*": ["./web/src/*"] }
   },
-  "include": ["src", "vite.config.ts"],
+  "include": ["web/src", "vite.config.ts", "vitest.config.ts", "eslint.config.js"],
   "exclude": ["node_modules"]
 }

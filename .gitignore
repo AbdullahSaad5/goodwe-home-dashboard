@@ -11,6 +11,7 @@
 # testing
 /coverage
 /.pytest_cache/
+/.ruff_cache/
 /.venv/
 __pycache__/
 *.py[cod]
@@ -42,7 +43,7 @@ yarn-error.log*
 # deployment and generated files
 .vercel
 next-env.d.ts
-/dist/
+/web/dist/
 /.wrangler/
 /outputs/
 /work/

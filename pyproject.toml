@@ -1,0 +1,63 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "goodwe-home-dashboard"
+version = "1.0.0"
+description = "A LAN-only, read-only dashboard for GoodWe solar inverters."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "AbdullahSaad5" }]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Web Environment",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Home Automation",
+]
+dependencies = [
+  "fastapi>=0.116,<1",
+  "goodwe==0.4.10",
+  "httpx>=0.28,<1",
+  "pydantic>=2.11,<3",
+  "uvicorn[standard]>=0.35,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.4,<9",
+  "ruff>=0.12,<1",
+]
+
+[project.urls]
+Homepage = "https://github.com/AbdullahSaad5/goodwe-home-dashboard"
+Issues = "https://github.com/AbdullahSaad5/goodwe-home-dashboard/issues"
+Source = "https://github.com/AbdullahSaad5/goodwe-home-dashboard"
+
+[tool.hatch.build.targets.wheel]
+packages = ["server/src/goodwe_home"]
+
+[tool.pytest.ini_options]
+pythonpath = ["server/src"]
+testpaths = ["server/tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+extend-exclude = ["data", "dist", "node_modules", "web/public"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+
+[tool.ruff.lint]
+select = ["B", "E", "F", "I", "RUF", "SIM", "UP"]
+
+[tool.ruff.lint.per-file-ignores]
+"server/tests/**/*.py" = ["B017"]

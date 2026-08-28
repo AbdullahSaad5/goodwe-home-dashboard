@@ -9,8 +9,8 @@ if [ ! -x .venv/bin/uvicorn ]; then
   exit 1
 fi
 
-if [ ! -f dist/index.html ]; then
+if [ ! -f web/dist/index.html ]; then
   npm run build
 fi
 
-exec .venv/bin/uvicorn backend.main:app --host 0.0.0.0 --port "${PORT:-8080}"
+exec .venv/bin/uvicorn goodwe_home.main:app --host 0.0.0.0 --port "${PORT:-8080}"

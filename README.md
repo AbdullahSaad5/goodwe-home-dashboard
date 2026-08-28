@@ -3,6 +3,7 @@
 A modern, self-hosted dashboard for monitoring a GoodWe solar inverter directly over your local network.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![CI](https://github.com/AbdullahSaad5/goodwe-home-dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/AbdullahSaad5/goodwe-home-dashboard/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)
 ![Node.js](https://img.shields.io/badge/Node.js-22.13%2B-339933?logo=nodedotjs&logoColor=white)
 
@@ -10,7 +11,7 @@ GoodWe Home shows live production, household demand, battery activity, and grid 
 
 It is read-only by design. The dashboard never changes inverter settings, operating modes, battery limits, or export controls.
 
-![GoodWe Home dashboard](public/og.png)
+![GoodWe Home dashboard](web/public/og.png)
 
 > [!NOTE]
 > This is an independent community project and is not affiliated with or endorsed by GoodWe Technologies Co., Ltd.
@@ -67,16 +68,16 @@ After the first successful discovery, later launches normally connect directly t
 
 Configuration is supplied through environment variables. Every setting is optional.
 
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `GOODWE_HOST` | Automatic | Optional inverter address override |
-| `GOODWE_PORT` | `502` | Local inverter communication port |
-| `POLL_INTERVAL_SECONDS` | `10` | Live telemetry polling interval |
-| `STALE_AFTER_SECONDS` | `30` | Age before readings are marked stale |
-| `DASHBOARD_TIMEZONE` | `Asia/Karachi` | Calendar boundaries and reporting timezone |
-| `DATABASE_PATH` | `data/goodwe.sqlite3` | Local SQLite database path |
-| `STATIC_DIR` | `dist` | Built frontend directory |
-| `PORT` | `8080` | Dashboard web-server port |
+| Variable                | Default               | Purpose                                    |
+| ----------------------- | --------------------- | ------------------------------------------ |
+| `GOODWE_HOST`           | Automatic             | Optional inverter address override         |
+| `GOODWE_PORT`           | `502`                 | Local inverter communication port          |
+| `POLL_INTERVAL_SECONDS` | `10`                  | Live telemetry polling interval            |
+| `STALE_AFTER_SECONDS`   | `30`                  | Age before readings are marked stale       |
+| `DASHBOARD_TIMEZONE`    | `Asia/Karachi`        | Calendar boundaries and reporting timezone |
+| `DATABASE_PATH`         | `data/goodwe.sqlite3` | Local SQLite database path                 |
+| `STATIC_DIR`            | `web/dist`            | Built frontend directory                   |
+| `PORT`                  | `8080`                | Dashboard web-server port                  |
 
 Example:
 
@@ -86,15 +87,15 @@ DASHBOARD_TIMEZONE=America/Toronto PORT=8080 ./start.sh
 
 ## Dashboard sections
 
-| Section | Contents |
-| --- | --- |
-| Overview | Live power flow, energy chart, daily totals, MPPT, battery, grid quality, and alerts |
-| History | Anchored day, week, month, and year charts with CSV export |
-| Solar | PV production, MPPT voltage, current, power, and operating state |
-| Battery | SOC, SOH, voltage, current, temperatures, cell spread, limits, and BMS details |
-| Grid & Loads | Import/export, voltage, frequency, apparent power, reactive power, and meter state |
-| System | Inverter health, firmware, clocks, temperatures, registers, and local events |
-| Raw Data | Searchable access to every sensor returned by the inverter |
+| Section      | Contents                                                                             |
+| ------------ | ------------------------------------------------------------------------------------ |
+| Overview     | Live power flow, energy chart, daily totals, MPPT, battery, grid quality, and alerts |
+| History      | Anchored day, week, month, and year charts with CSV export                           |
+| Solar        | PV production, MPPT voltage, current, power, and operating state                     |
+| Battery      | SOC, SOH, voltage, current, temperatures, cell spread, limits, and BMS details       |
+| Grid & Loads | Import/export, voltage, frequency, apparent power, reactive power, and meter state   |
+| System       | Inverter health, firmware, clocks, temperatures, registers, and local events         |
+| Raw Data     | Searchable access to every sensor returned by the inverter                           |
 
 ## Data storage
 
@@ -113,16 +114,16 @@ SQLite runs in WAL mode so the dashboard can read history while the collector wr
 
 Every dashboard API endpoint is read-only.
 
-| Endpoint | Purpose |
-| --- | --- |
-| `GET /api/v1/health` | Collector health and active inverter address |
-| `GET /api/v1/status` | Latest normalized snapshot |
-| `GET /api/v1/history` | Time-series history for a selected period |
-| `GET /api/v1/summary` | Aggregated energy and availability metrics |
-| `GET /api/v1/sensors` | Latest raw sensor readings |
-| `GET /api/v1/events` | Local collector and inverter events |
-| `GET /api/v1/export.csv` | CSV export for a selected period |
-| `GET /api/v1/stream` | Live snapshot stream over SSE |
+| Endpoint                 | Purpose                                      |
+| ------------------------ | -------------------------------------------- |
+| `GET /api/v1/health`     | Collector health and active inverter address |
+| `GET /api/v1/status`     | Latest normalized snapshot                   |
+| `GET /api/v1/history`    | Time-series history for a selected period    |
+| `GET /api/v1/summary`    | Aggregated energy and availability metrics   |
+| `GET /api/v1/sensors`    | Latest raw sensor readings                   |
+| `GET /api/v1/events`     | Local collector and inverter events          |
+| `GET /api/v1/export.csv` | CSV export for a selected period             |
+| `GET /api/v1/stream`     | Live snapshot stream over SSE                |
 
 History, summary, and export requests accept `period=day|week|month|year` and an optional `anchor=YYYY-MM-DD`.
 
@@ -137,6 +138,15 @@ Battery power is positive while discharging and negative while charging. Grid po
 
 The browser communicates only with the local FastAPI service. It does not connect directly to the inverter.
 
+The source is separated by runtime boundary:
+
+- `server/src/goodwe_home/` contains the installable Python package.
+- `server/tests/` contains backend tests.
+- `web/src/` contains the React application and frontend tests.
+- `docs/` contains deeper technical documentation.
+
+See [Architecture](docs/architecture.md) for module responsibilities, data flow, and extension guidance.
+
 ## Development
 
 Install dependencies once:
@@ -148,7 +158,7 @@ Install dependencies once:
 Run the backend and frontend development servers in separate terminals:
 
 ```bash
-.venv/bin/uvicorn backend.main:app --host 0.0.0.0 --port 8080
+.venv/bin/uvicorn goodwe_home.main:app --host 0.0.0.0 --port 8080
 ```
 
 ```bash
@@ -158,10 +168,13 @@ npm run dev
 Run the checks before submitting changes:
 
 ```bash
-.venv/bin/pytest
-npm test
-npm run build
+make format
+make lint
+make test
+make build
 ```
+
+See [Contributing](CONTRIBUTING.md) for the complete development workflow and pull request expectations.
 
 ## Security and privacy
 
@@ -176,3 +189,5 @@ Review your network rules before running the server on an untrusted or shared ne
 ## License
 
 Released under the [MIT License](LICENSE).
+
+Please read the [Code of Conduct](CODE_OF_CONDUCT.md) and [Security Policy](SECURITY.md) before participating or reporting a vulnerability.

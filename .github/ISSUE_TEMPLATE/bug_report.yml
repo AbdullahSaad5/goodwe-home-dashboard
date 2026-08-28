@@ -1,0 +1,44 @@
+name: Bug report
+description: Report a reproducible problem with GoodWe Home.
+title: '[Bug]: '
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for helping improve GoodWe Home. Remove private network details before posting.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What happened, and what did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Start the dashboard...
+        2. Open...
+        3. Observe...
+    validations:
+      required: true
+  - type: input
+    id: inverter
+    attributes:
+      label: Inverter model
+      description: Do not include its IP address or serial number.
+  - type: input
+    id: version
+    attributes:
+      label: GoodWe Home version or commit
+  - type: input
+    id: environment
+    attributes:
+      label: Operating system and browser
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Remove IP addresses, serial numbers, and other sensitive information.
+      render: shell

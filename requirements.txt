@@ -1,6 +1,0 @@
-fastapi>=0.116,<1
-goodwe==0.4.10
-httpx>=0.28,<1
-pydantic>=2.11,<3
-pytest>=8.4,<9
-uvicorn[standard]>=0.35,<1

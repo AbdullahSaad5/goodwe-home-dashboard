@@ -1,0 +1,30 @@
+name: Feature request
+description: Suggest a focused improvement to GoodWe Home.
+title: '[Feature]: '
+labels: [enhancement]
+body:
+  - type: textarea
+    id: need
+    attributes:
+      label: User need
+      description: What problem would this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the behavior you would like to see.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Read-only scope
+      options:
+        - label: This request does not require changing inverter settings or controls.
+          required: true
