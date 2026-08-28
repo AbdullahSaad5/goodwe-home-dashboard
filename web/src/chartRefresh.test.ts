@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import * as echarts from 'echarts/core';
 import { SVGRenderer } from 'echarts/renderers';
-import { chartUpdateOptions } from './DashboardComponents';
+import { chartAnimationOptions, chartUpdateOptions } from './DashboardComponents';
 
 echarts.use([SVGRenderer]);
 
@@ -10,7 +10,14 @@ describe('chart refresh state', () => {
     expect(chartUpdateOptions()).toEqual({
       notMerge: false,
       lazyUpdate: true,
-      replaceMerge: ['series'],
+    });
+  });
+
+  it('animates the initial chart but not incoming data refreshes', () => {
+    expect(chartAnimationOptions(false)).toEqual({
+      animation: true,
+      animationDuration: 320,
+      animationDurationUpdate: 0,
     });
   });
 

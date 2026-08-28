@@ -22,11 +22,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Improved the responsive dashboard and connecting experience while retaining the GoodWe Home product name and existing light visual system.
 - Reworked Event history into compact diagnostic rows with plain-language fault, connectivity, discovery, and collector explanations.
 - Consolidated alerts, event counts, and desktop-notification controls into one header menu.
+- Tightened Event history guidance into content-sized, vertically aligned rows with clearly separated labels.
 
 ### Fixed
 
 - Synchronized Power Trends, calendar charts, summaries, sensors, events, and Command Center intelligence with each live snapshot, with a coordinated 60-second fallback refresh.
 - Preserved ECharts zoom windows when refreshed points arrive while still resetting charts for intentional range, period, or anchor-date changes.
+- Prevented live chart refreshes from replaying the initial line-drawing animation.
 - Exposed stored inverter fault details and meanings instead of internal event keys and generic error messages.
 - Prevented the initial connecting experience from remaining stuck when collector data becomes available.
 

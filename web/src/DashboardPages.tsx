@@ -139,7 +139,7 @@ export function EventList({ events, limit }: { events: EventItem[]; limit?: numb
                 <p className="event-guidance">
                   <Info />
                   <span>
-                    <strong>What this means</strong>
+                    <strong>What this means:</strong>
                     {presentation.guidance}
                   </span>
                 </p>

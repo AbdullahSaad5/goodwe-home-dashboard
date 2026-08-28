@@ -218,7 +218,7 @@ describe('dashboard interactions', () => {
 
     expect(screen.getByText('Grid supply fault reported')).toBeInTheDocument();
     expect(screen.getByText(/utility grid was unavailable/i)).toBeInTheDocument();
-    expect(screen.getByText('What this means')).toBeInTheDocument();
+    expect(screen.getByText('What this means:')).toBeInTheDocument();
     expect(screen.getByText('Reported faults')).toBeInTheDocument();
     expect(screen.queryByText('system_health')).not.toBeInTheDocument();
   });

@@ -53,8 +53,16 @@ export function animationDuration(reduceMotion: boolean | null, duration: number
   return reduceMotion ? 0 : duration;
 }
 
+export function chartAnimationOptions(reduceMotion: boolean | null) {
+  return {
+    animation: !reduceMotion,
+    animationDuration: animationDuration(reduceMotion, 320),
+    animationDurationUpdate: 0,
+  };
+}
+
 export function chartUpdateOptions() {
-  return { notMerge: false, lazyUpdate: true, replaceMerge: ['series'] };
+  return { notMerge: false, lazyUpdate: true };
 }
 
 type ParsedReading = { numeric: number; digits: number; forcePlus: boolean; suffix: string };
@@ -422,8 +430,7 @@ export function EnergyChart({
     );
 
   const option: echarts.EChartsCoreOption = {
-    animation: !reduceMotion,
-    animationDuration: animationDuration(reduceMotion, 320),
+    ...chartAnimationOptions(reduceMotion),
     aria: { enabled: true, decal: { show: false } },
     color: definitions.map((item) => item.color),
     grid: { top: 18, right: kind === 'battery' ? 50 : 18, bottom: 42, left: 52 },
@@ -553,8 +560,7 @@ export function ProjectionChart({
     { name: 'SOC', color: palette.soc, key: 'soc_pct', axis: 1 },
   ] as const;
   const option: echarts.EChartsCoreOption = {
-    animation: !reduceMotion,
-    animationDuration: animationDuration(reduceMotion, 320),
+    ...chartAnimationOptions(reduceMotion),
     aria: { enabled: true, decal: { show: false } },
     color: series.map((item) => item.color),
     grid: { top: 18, right: 50, bottom: 42, left: 52 },
