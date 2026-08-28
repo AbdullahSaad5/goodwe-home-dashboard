@@ -135,7 +135,7 @@ export function EventList({ events, limit }: { events: EventItem[]; limit?: numb
                 <time dateTime={event.created_at}>{formatDateTime(event.created_at)}</time>
               </div>
               <p className="event-summary">{presentation.summary}</p>
-              {!compact && presentation.guidance && (
+              {!compact && presentation.guidance && event.severity !== 'info' && (
                 <p className="event-guidance">
                   <Info />
                   <span>
