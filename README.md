@@ -36,8 +36,8 @@ _Privacy-safe preview with synthetic demo data; no inverter address, site detail
 
 ## Dashboard tour
 
-| Battery diagnostics | Energy history |
-| --- | --- |
+| Battery diagnostics                                                                | Energy history                                                                     |
+| ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | ![GoodWe Home Battery page with demo data](docs/images/dashboard-battery-demo.png) | ![GoodWe Home History page with demo data](docs/images/dashboard-history-demo.png) |
 
 These previews are derived from the live interface, but all dates, values, and chart series are synthetic.

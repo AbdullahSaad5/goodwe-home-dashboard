@@ -202,14 +202,15 @@ if settings.static_dir.exists():
     if assets.exists():
         app.mount("/assets", StaticFiles(directory=assets), name="assets")
 
-    @app.get("/{full_path:path}", include_in_schema=False)
-    def frontend(full_path: str) -> FileResponse:
-        requested = (settings.static_dir / full_path).resolve()
-        static_root = settings.static_dir.resolve()
-        if requested.is_relative_to(static_root) and requested.is_file():
-            headers = {"Cache-Control": "no-cache"} if requested.name == "index.html" else None
-            return FileResponse(requested, headers=headers)
-        index = settings.static_dir / "index.html"
-        if index.exists():
-            return FileResponse(index, headers={"Cache-Control": "no-cache"})
-        raise HTTPException(status_code=404, detail="Dashboard build not found")
+
+@app.get("/{full_path:path}", include_in_schema=False)
+def frontend(full_path: str) -> FileResponse:
+    requested = (settings.static_dir / full_path).resolve()
+    static_root = settings.static_dir.resolve()
+    if requested.is_relative_to(static_root) and requested.is_file():
+        headers = {"Cache-Control": "no-cache"} if requested.name == "index.html" else None
+        return FileResponse(requested, headers=headers)
+    index = settings.static_dir / "index.html"
+    if index.exists():
+        return FileResponse(index, headers={"Cache-Control": "no-cache"})
+    raise HTTPException(status_code=404, detail="Dashboard build not found")

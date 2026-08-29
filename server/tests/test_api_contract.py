@@ -1,3 +1,4 @@
+from dataclasses import replace
 from datetime import UTC, datetime
 
 from fastapi.testclient import TestClient
@@ -93,7 +94,12 @@ def test_status_exposes_the_configured_reporting_timezone() -> None:
     assert response.json()["connection"]["reporting_timezone"] == main.settings.timezone
 
 
-def test_frontend_shell_revalidates_after_a_dashboard_restart() -> None:
+def test_frontend_shell_revalidates_after_a_dashboard_restart(tmp_path, monkeypatch) -> None:
+    static_dir = tmp_path / "dist"
+    static_dir.mkdir()
+    (static_dir / "index.html").write_text("<html>GoodWe Home</html>", encoding="utf-8")
+    monkeypatch.setattr(main, "settings", replace(main.settings, static_dir=static_dir))
+
     response = TestClient(app).get("/")
 
     assert response.status_code == 200
