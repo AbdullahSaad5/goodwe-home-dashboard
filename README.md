@@ -20,21 +20,19 @@ _Privacy-safe preview with synthetic demo data; no inverter address, site detail
 
 ## Highlights
 
-- Live Solar → Home ↔ Battery ↔ Grid power-flow visualization
-- Animated values and directional arrows driven by real telemetry
-- Automatic inverter discovery with a persistent last-known address
-- Day, week, month, and year energy charts with date navigation
-- Solar, MPPT, battery, BMS, grid, load, and system diagnostics
-- Local event history, searchable raw sensors, and CSV export
-- Responsive desktop, tablet, and mobile interface
-- SQLite history with no external database or cloud dependency
-- Coordinated Server-Sent Events keep live cards, charts, summaries, sensors, and events in sync
-- Interactive chart zoom is preserved while refreshed points arrive
-- Operational 15-minute to 24-hour trends with outage shading and table mode
-- Optional calibrated solar forecast, learned load profile, and 24-hour SOC projection
-- Debounced outage history, timestamped daily peaks, records, and advisory watchdogs
-- Persistent light/dark appearance with first-visit system preference and a light or dark full-screen wall mode
-- Opt-in foreground desktop notifications
+- See solar production, home demand, battery activity, and grid exchange at a glance
+- Follow live energy flow between Solar → Home ↔ Battery ↔ Grid
+- Explore day, week, month, and year performance with interactive charts
+- Track energy generated, consumed, imported, exported, and overall grid independence
+- Monitor battery charge, health, temperature, power, limits, and cell balance
+- Inspect solar performance down to individual MPPT voltage, current, and power
+- Watch grid quality, household demand, backup load, outages, and utility exchange
+- Use optional weather-based solar forecasts, learned load profiles, and battery projections
+- Review health alerts, inverter diagnostics, raw sensors, and local event history
+- Export historical data to CSV for deeper analysis
+- Enjoy a responsive interface with light, dark, and full-screen wall modes
+- Keep monitoring private with read-only local access and self-hosted storage
+- Get started quickly with automatic inverter discovery
 
 ## Dashboard tour
 
