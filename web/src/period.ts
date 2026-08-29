@@ -1,4 +1,5 @@
 import type { Period } from './types';
+import { DEFAULT_REPORTING_TIME_ZONE } from './reportingTimeZone';
 
 function parseAnchor(anchor: string): Date {
   const [year, month, day] = anchor.split('-').map(Number);
@@ -30,7 +31,7 @@ export function shiftAnchor(anchor: string, period: Period, direction: -1 | 1): 
   return formatAnchor(normalized);
 }
 
-export function todayInTimeZone(timeZone = 'Asia/Karachi', now = new Date()): string {
+export function todayInTimeZone(timeZone = DEFAULT_REPORTING_TIME_ZONE, now = new Date()): string {
   const parts = new Intl.DateTimeFormat('en', {
     timeZone,
     year: 'numeric',

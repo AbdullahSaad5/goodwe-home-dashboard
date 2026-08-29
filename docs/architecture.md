@@ -92,6 +92,7 @@ An inline bootstrap in `web/index.html` resolves the saved appearance or the fir
 - Aggregate-backed history must include retained telemetry newer than the latest completed rollup.
 - Same-context chart refreshes must preserve user-controlled zoom; explicit range, period, or date changes reset it without animating the replacement series.
 - Light and dark modes preserve the same semantic solar, load, battery, grid, warning, and error meanings.
+- Snapshot metadata carries the configured reporting timezone; every browser clock, timestamp, chart, and calendar boundary uses it instead of the browser timezone.
 
 ## Extension points
 

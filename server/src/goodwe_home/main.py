@@ -207,8 +207,9 @@ if settings.static_dir.exists():
         requested = (settings.static_dir / full_path).resolve()
         static_root = settings.static_dir.resolve()
         if requested.is_relative_to(static_root) and requested.is_file():
-            return FileResponse(requested)
+            headers = {"Cache-Control": "no-cache"} if requested.name == "index.html" else None
+            return FileResponse(requested, headers=headers)
         index = settings.static_dir / "index.html"
         if index.exists():
-            return FileResponse(index)
+            return FileResponse(index, headers={"Cache-Control": "no-cache"})
         raise HTTPException(status_code=404, detail="Dashboard build not found")

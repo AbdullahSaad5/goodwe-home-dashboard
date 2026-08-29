@@ -77,6 +77,29 @@ def test_command_center_success_contract_exposes_group_readiness() -> None:
     assert "period_totals" in payload
 
 
+def test_status_exposes_the_configured_reporting_timezone() -> None:
+    snapshot = normalize_snapshot(
+        {"ppv": 100},
+        collected_at=datetime.now(UTC),
+    )
+    existing = main.collector.current
+    main.collector.current = snapshot
+    try:
+        response = TestClient(app).get("/api/v1/status")
+    finally:
+        main.collector.current = existing
+
+    assert response.status_code == 200
+    assert response.json()["connection"]["reporting_timezone"] == main.settings.timezone
+
+
+def test_frontend_shell_revalidates_after_a_dashboard_restart() -> None:
+    response = TestClient(app).get("/")
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "no-cache"
+
+
 def test_history_accepts_an_optional_anchor_date() -> None:
     response = TestClient(app).get(
         "/api/v1/history", params={"period": "day", "anchor": "2026-08-20"}

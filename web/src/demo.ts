@@ -18,6 +18,7 @@ export const demoSnapshot: Snapshot = {
     firmware: '04048-02-S11',
     inverter_time: new Date().toISOString(),
     clock_drift_seconds: 2,
+    reporting_timezone: 'Asia/Karachi',
   },
   headline: 'Your home is running on battery',
   power: {

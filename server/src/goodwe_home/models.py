@@ -19,6 +19,7 @@ class ConnectionInfo(BaseModel):
     firmware: str | None = None
     inverter_time: datetime | None = None
     clock_drift_seconds: float | None = None
+    reporting_timezone: str = "Asia/Karachi"
 
 
 class PowerFlow(BaseModel):

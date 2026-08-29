@@ -139,6 +139,7 @@ class GoodWeCollector:
             display_model=self.config.display_model,
             protocol_model=getattr(self.inverter, "model_name", None),
             firmware=getattr(self.inverter, "firmware", None),
+            reporting_timezone=self.config.timezone,
         )
         readings = build_sensor_readings(raw, self.inverter.sensors(), collected_at)
         current_minute = int(collected_at.timestamp() // 60)
@@ -251,6 +252,7 @@ class GoodWeCollector:
                 "state": state,
                 "age_seconds": max(0, age) if age is not None else None,
                 "consecutive_failures": self.failures,
+                "reporting_timezone": self.config.timezone,
             }
         )
         return snapshot
@@ -261,6 +263,7 @@ class GoodWeCollector:
                 state="starting",
                 consecutive_failures=self.failures,
                 display_model=self.config.display_model,
+                reporting_timezone=self.config.timezone,
             ).model_dump(mode="json"),
             "message": "Waiting for the first inverter reading",
         }

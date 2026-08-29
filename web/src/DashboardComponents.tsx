@@ -33,6 +33,7 @@ import { Button } from '@/components/ui/button';
 import type { HistoryPoint, Period, ProjectionPoint, Snapshot } from './types';
 import { formatNumber, formatPower, formatTime } from './format';
 import { readableAnchor, shiftAnchor, todayInTimeZone } from './period';
+import { useReportingTimeZone } from './reportingTimeZone';
 import { chartTheme, useTheme } from './theme';
 import { palette, type LiveMetric, type SolarUse } from './ui';
 
@@ -259,14 +260,18 @@ export function HistoryControls({
   setPeriod,
   anchor,
   setAnchor,
+  now = new Date(),
 }: {
   period: Period;
   setPeriod: (period: Period) => void;
   anchor: string;
   setAnchor: (anchor: string) => void;
+  now?: Date;
 }) {
+  const timeZone = useReportingTimeZone();
   const next = shiftAnchor(anchor, period, 1);
-  const nextDisabled = next > todayInTimeZone();
+  const today = todayInTimeZone(timeZone, now);
+  const nextDisabled = next > today;
   return (
     <div className="history-controls">
       <label className="date-control">
@@ -275,7 +280,7 @@ export function HistoryControls({
         <input
           type="date"
           value={anchor}
-          max={todayInTimeZone()}
+          max={today}
           onChange={(event) => setAnchor(event.target.value)}
           aria-label="Chart anchor date"
         />
@@ -391,6 +396,7 @@ export function EnergyChart({
   outages?: Array<{ start: string; end: string | null }>;
   showSoc?: boolean;
 }) {
+  const timeZone = useReportingTimeZone();
   const reduceMotion = useReducedMotion();
   const colors = chartTheme[useTheme()];
   const definitions: SeriesDefinition[] =
@@ -462,14 +468,18 @@ export function EnergyChart({
             return `<div style="display:flex;align-items:center;gap:8px;margin-top:8px"><i style="width:8px;height:8px;border-radius:50%;background:${item.color}"></i><span style="min-width:55px;color:${colors.tooltipMuted}">${item.seriesName}</span><strong>${rendered}</strong>${direction ? `<small style="color:${colors.tooltipSubtle}">${direction}</small>` : ''}</div>`;
           })
           .join('');
-        return `<strong>${formatTime(new Date(params[0].value[0]).toISOString())}</strong>${rows}`;
+        return `<strong>${formatTime(new Date(params[0].value[0]).toISOString(), timeZone)}</strong>${rows}`;
       },
     },
     xAxis: {
       type: 'time',
       axisLine: { lineStyle: { color: colors.axis } },
       axisTick: { show: false },
-      axisLabel: { color: colors.label, fontSize: 10 },
+      axisLabel: {
+        color: colors.label,
+        fontSize: 10,
+        formatter: (value: number) => formatTime(new Date(value).toISOString(), timeZone),
+      },
       splitLine: { show: false },
     },
     yAxis: [
@@ -554,6 +564,7 @@ export function ProjectionChart({
   points: ProjectionPoint[];
   height?: number;
 }) {
+  const timeZone = useReportingTimeZone();
   const reduceMotion = useReducedMotion();
   const colors = chartTheme[useTheme()];
   if (!points.length)
@@ -576,12 +587,35 @@ export function ProjectionChart({
       borderColor: colors.tooltipBorder,
       textStyle: { color: colors.tooltipText },
       axisPointer: { lineStyle: { color: colors.tooltipSubtle, type: 'dashed' } },
+      formatter: (raw: unknown) => {
+        const params = raw as Array<{
+          seriesName: string;
+          color: string;
+          value: [number, number];
+        }>;
+        if (!params.length) return '';
+        const rows = params
+          .map((item) => {
+            const value = Number(item.value[1]);
+            const rendered =
+              item.seriesName === 'SOC'
+                ? `${formatNumber(value, 0)}%`
+                : `${formatNumber(value, 2)} kW`;
+            return `<div style="display:flex;align-items:center;gap:8px;margin-top:8px"><i style="width:8px;height:8px;border-radius:50%;background:${item.color}"></i><span style="min-width:55px;color:${colors.tooltipMuted}">${item.seriesName}</span><strong>${rendered}</strong></div>`;
+          })
+          .join('');
+        return `<strong>${formatTime(new Date(params[0].value[0]).toISOString(), timeZone)}</strong>${rows}`;
+      },
     },
     xAxis: {
       type: 'time',
       axisLine: { lineStyle: { color: colors.axis } },
       axisTick: { show: false },
-      axisLabel: { color: colors.label, fontSize: 10 },
+      axisLabel: {
+        color: colors.label,
+        fontSize: 10,
+        formatter: (value: number) => formatTime(new Date(value).toISOString(), timeZone),
+      },
       splitLine: { show: false },
     },
     yAxis: [

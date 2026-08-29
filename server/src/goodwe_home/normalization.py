@@ -80,16 +80,12 @@ def normalize_snapshot(
     display_model: str = "GW6000-ES-C10",
     protocol_model: str | None = None,
     firmware: str | None = None,
+    reporting_timezone: str = "Asia/Karachi",
 ) -> NormalizedSnapshot:
     inverter_time = _parse_inverter_time(raw)
-    comparable_inverter_time = inverter_time
-    if comparable_inverter_time and comparable_inverter_time.tzinfo is None:
-        comparable_inverter_time = comparable_inverter_time.replace(tzinfo=ZoneInfo("Asia/Karachi"))
-    clock_drift = (
-        abs((collected_at - comparable_inverter_time).total_seconds())
-        if comparable_inverter_time
-        else None
-    )
+    if inverter_time and inverter_time.tzinfo is None:
+        inverter_time = inverter_time.replace(tzinfo=ZoneInfo(reporting_timezone))
+    clock_drift = abs((collected_at - inverter_time).total_seconds()) if inverter_time else None
 
     pv_w = _number(raw, "ppv")
     battery_w = _number(raw, "pbattery1")
@@ -187,6 +183,7 @@ def normalize_snapshot(
             firmware=firmware,
             inverter_time=inverter_time,
             clock_drift_seconds=clock_drift,
+            reporting_timezone=reporting_timezone,
         ),
         headline=headline,
         power=PowerFlow(

@@ -50,6 +50,11 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { since } from './format';
 import { todayInTimeZone } from './period';
+import {
+  DEFAULT_REPORTING_TIME_ZONE,
+  ReportingTimeZoneProvider,
+  useReportingTimeZone,
+} from './reportingTimeZone';
 import { ThemeProvider, persistTheme, readStoredTheme, resolveTheme, type Theme } from './theme';
 import type { CommandHistoryRange, EventItem, Page, Period, Snapshot, TrendRange } from './types';
 import { useDashboard } from './useDashboard';
@@ -301,20 +306,23 @@ export function RefreshPill({
   );
 }
 
-function HeaderClock() {
-  const [now, setNow] = useState(() => Date.now());
+export function HeaderClock({ now: fixedNow }: { now?: number } = {}) {
+  const timeZone = useReportingTimeZone();
+  const [liveNow, setLiveNow] = useState(() => Date.now());
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    if (fixedNow != null) return;
+    const timer = window.setInterval(() => setLiveNow(Date.now()), 1000);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [fixedNow]);
   return (
     <span className="header-clock">
       <span className="status-dot live" />
       {new Intl.DateTimeFormat(undefined, {
+        timeZone,
         hour: 'numeric',
         minute: '2-digit',
         second: '2-digit',
-      }).format(now)}
+      }).format(fixedNow ?? liveNow)}
     </span>
   );
 }
@@ -487,7 +495,7 @@ export default function App() {
   );
   const [page, setPage] = useState<Page>('overview');
   const [period, setPeriod] = useState<Period>('day');
-  const [anchor, setAnchor] = useState(() => todayInTimeZone());
+  const [anchor, setAnchor] = useState(() => todayInTimeZone(DEFAULT_REPORTING_TIME_ZONE));
   const [trendRange, setTrendRange] = useState<TrendRange>('24h');
   const [commandHistoryRange, setCommandHistoryRange] = useState<CommandHistoryRange>('30d');
   const [wallMode, setWallMode] = useState(false);
@@ -506,7 +514,16 @@ export default function App() {
     refreshSnapshot,
     refreshCommandCenter,
   } = useDashboard(period, anchor, trendRange, commandHistoryRange);
+  const reportingTimeZone = snapshot?.connection.reporting_timezone ?? DEFAULT_REPORTING_TIME_ZONE;
   const notifications = useDesktopNotifications(events);
+  useEffect(() => {
+    if (!snapshot) return;
+    setAnchor((current) =>
+      current === todayInTimeZone(DEFAULT_REPORTING_TIME_ZONE)
+        ? todayInTimeZone(reportingTimeZone)
+        : current,
+    );
+  }, [reportingTimeZone, snapshot]);
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -609,55 +626,57 @@ export default function App() {
     );
 
   return (
-    <ThemeProvider theme={theme}>
-      <TooltipProvider delayDuration={300}>
-        <div className={`app-shell ${wallMode ? 'wall-mode' : ''}`}>
-          <DesktopHeader
-            page={page}
-            setPage={setPage}
-            snapshot={snapshot}
-            events={events}
-            nextRefreshAt={nextRefreshAt}
-            wallMode={wallMode}
-            onToggleWallMode={() => void toggleWallMode()}
-            notificationStatus={notifications.availability}
-            onEnableNotifications={() => void notifications.enable()}
-            theme={theme}
-            onToggleTheme={toggleTheme}
-          />
+    <ReportingTimeZoneProvider timeZone={reportingTimeZone}>
+      <ThemeProvider theme={theme}>
+        <TooltipProvider delayDuration={300}>
+          <div className={`app-shell ${wallMode ? 'wall-mode' : ''}`}>
+            <DesktopHeader
+              page={page}
+              setPage={setPage}
+              snapshot={snapshot}
+              events={events}
+              nextRefreshAt={nextRefreshAt}
+              wallMode={wallMode}
+              onToggleWallMode={() => void toggleWallMode()}
+              notificationStatus={notifications.availability}
+              onEnableNotifications={() => void notifications.enable()}
+              theme={theme}
+              onToggleTheme={toggleTheme}
+            />
 
-          <main className="app-main">
-            {preview && <Badge className="preview-pill">Preview data</Badge>}
-            {connectionMessage(snapshot.connection.state) && (
-              <div className={`alert ${snapshot.connection.state}`} role="status">
-                <span className={`status-dot ${snapshot.connection.state}`} />
-                <div>
-                  <strong>
-                    {snapshot.connection.state === 'offline'
-                      ? 'Live connection unavailable'
-                      : 'Live readings delayed'}
-                  </strong>
-                  <span>{connectionMessage(snapshot.connection.state)}</span>
+            <main className="app-main">
+              {preview && <Badge className="preview-pill">Preview data</Badge>}
+              {connectionMessage(snapshot.connection.state) && (
+                <div className={`alert ${snapshot.connection.state}`} role="status">
+                  <span className={`status-dot ${snapshot.connection.state}`} />
+                  <div>
+                    <strong>
+                      {snapshot.connection.state === 'offline'
+                        ? 'Live connection unavailable'
+                        : 'Live readings delayed'}
+                    </strong>
+                    <span>{connectionMessage(snapshot.connection.state)}</span>
+                  </div>
+                  <RefreshCw aria-hidden="true" />
                 </div>
-                <RefreshCw aria-hidden="true" />
-              </div>
-            )}
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.div
-                key={page}
-                className="page"
-                initial={reduceMotion ? false : { opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={reduceMotion ? { opacity: 1 } : { opacity: 0, y: -4 }}
-                transition={{ duration: reduceMotion ? 0 : 0.2, ease: 'easeOut' }}
-              >
-                {content}
-              </motion.div>
-            </AnimatePresence>
-          </main>
-          <MobileNavigation page={page} setPage={setPage} />
-        </div>
-      </TooltipProvider>
-    </ThemeProvider>
+              )}
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={page}
+                  className="page"
+                  initial={reduceMotion ? false : { opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={reduceMotion ? { opacity: 1 } : { opacity: 0, y: -4 }}
+                  transition={{ duration: reduceMotion ? 0 : 0.2, ease: 'easeOut' }}
+                >
+                  {content}
+                </motion.div>
+              </AnimatePresence>
+            </main>
+            <MobileNavigation page={page} setPage={setPage} />
+          </div>
+        </TooltipProvider>
+      </ThemeProvider>
+    </ReportingTimeZoneProvider>
   );
 }

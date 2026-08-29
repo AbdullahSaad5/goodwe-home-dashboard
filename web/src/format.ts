@@ -1,5 +1,3 @@
-const REPORTING_TIME_ZONE = 'Asia/Karachi';
-
 export function formatNumber(value: number | null | undefined, digits = 1): string {
   if (value == null || !Number.isFinite(value)) return '—';
   return value.toLocaleString(undefined, { maximumFractionDigits: digits });
@@ -13,19 +11,19 @@ export function formatPower(watts: number | null | undefined, signed = false): s
   return `${sign}${formatNumber(value, 0)} W`;
 }
 
-export function formatDateTime(value: string | null | undefined): string {
+export function formatDateTime(value: string | null | undefined, timeZone: string): string {
   if (!value) return '—';
   return new Intl.DateTimeFormat(undefined, {
-    timeZone: REPORTING_TIME_ZONE,
+    timeZone,
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(value));
 }
 
-export function formatTime(value: string | null | undefined): string {
+export function formatTime(value: string | null | undefined, timeZone: string): string {
   if (!value) return '—';
   return new Intl.DateTimeFormat(undefined, {
-    timeZone: REPORTING_TIME_ZONE,
+    timeZone,
     hour: 'numeric',
     minute: '2-digit',
   }).format(new Date(value));

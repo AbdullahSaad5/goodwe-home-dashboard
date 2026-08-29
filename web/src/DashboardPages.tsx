@@ -54,6 +54,7 @@ import {
 } from './CommandCenterComponents';
 import { describeEvent } from './events';
 import { formatDateTime, formatNumber, formatPower, periodLabel } from './format';
+import { useReportingTimeZone } from './reportingTimeZone';
 import type {
   CommandCenterResponse,
   CommandHistoryRange,
@@ -101,6 +102,7 @@ function HealthBadge({ health }: { health: Snapshot['system']['health'] }) {
 }
 
 export function EventList({ events, limit }: { events: EventItem[]; limit?: number }) {
+  const timeZone = useReportingTimeZone();
   const visible = limit ? events.slice(0, limit) : events;
   const compact = limit != null;
   if (!visible.length)
@@ -132,7 +134,9 @@ export function EventList({ events, limit }: { events: EventItem[]; limit?: numb
                   <span className="event-type">{presentation.typeLabel}</span>
                   <strong>{presentation.title}</strong>
                 </div>
-                <time dateTime={event.created_at}>{formatDateTime(event.created_at)}</time>
+                <time dateTime={event.created_at}>
+                  {formatDateTime(event.created_at, timeZone)}
+                </time>
               </div>
               <p className="event-summary">{presentation.summary}</p>
               {!compact && presentation.guidance && event.severity !== 'info' && (
@@ -789,6 +793,7 @@ export function GridPage({
 }
 
 export function SystemPage({ snapshot, events }: { snapshot: Snapshot; events: EventItem[] }) {
+  const timeZone = useReportingTimeZone();
   const system = snapshot.system;
   return (
     <>
@@ -835,17 +840,20 @@ export function SystemPage({ snapshot, events }: { snapshot: Snapshot; events: E
         <Panel title="Connectivity" action={<Radio />}>
           <dl className="details-grid">
             <Detail label="Connection" value={snapshot.connection.state} />
-            <Detail label="Last reading" value={formatDateTime(snapshot.connection.last_updated)} />
+            <Detail
+              label="Last reading"
+              value={formatDateTime(snapshot.connection.last_updated, timeZone)}
+            />
             <Detail
               label="Inverter clock"
-              value={formatDateTime(snapshot.connection.inverter_time)}
+              value={formatDateTime(snapshot.connection.inverter_time, timeZone)}
             />
             <Detail
               label="Meter link"
               value={snapshot.grid.meter_communicating ? 'Communicating' : 'Unavailable'}
             />
             <Detail label="Raw sensors" value={formatNumber(snapshot.raw_count, 0)} />
-            <Detail label="Reporting timezone" value="Asia/Karachi" />
+            <Detail label="Reporting timezone" value={timeZone} />
           </dl>
         </Panel>
       </div>
@@ -880,6 +888,7 @@ export function SystemPage({ snapshot, events }: { snapshot: Snapshot; events: E
 }
 
 export function RawPage({ sensors }: { sensors: SensorReading[] }) {
+  const timeZone = useReportingTimeZone();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('ALL');
   const categories = useMemo(
@@ -950,7 +959,7 @@ export function RawPage({ sensors }: { sensors: SensorReading[] }) {
                   <td>
                     <span className="category-pill">{sensor.category}</span>
                   </td>
-                  <td>{formatDateTime(sensor.timestamp)}</td>
+                  <td>{formatDateTime(sensor.timestamp, timeZone)}</td>
                 </tr>
               ))}
             </tbody>

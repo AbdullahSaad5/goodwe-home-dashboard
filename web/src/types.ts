@@ -21,6 +21,7 @@ export interface Snapshot {
     firmware: string | null;
     inverter_time: string | null;
     clock_drift_seconds: number | null;
+    reporting_timezone: string;
   };
   headline: string;
   power: {

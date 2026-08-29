@@ -11,7 +11,9 @@ GoodWe Home shows live production, household demand, battery activity, and grid 
 
 It is read-only by design. The dashboard never changes inverter settings, operating modes, battery limits, or export controls.
 
-![GoodWe Home dashboard](web/public/og.png)
+![GoodWe Home Overview with demo data](docs/images/dashboard-overview-demo.png)
+
+_Privacy-safe preview with synthetic demo data; no inverter address, site details, or household telemetry is shown._
 
 > [!NOTE]
 > This is an independent community project and is not affiliated with or endorsed by GoodWe Technologies Co., Ltd.
@@ -33,6 +35,14 @@ It is read-only by design. The dashboard never changes inverter settings, operat
 - Debounced outage history, timestamped daily peaks, records, and advisory watchdogs
 - Persistent light/dark appearance with first-visit system preference and a light or dark full-screen wall mode
 - Opt-in foreground desktop notifications
+
+## Dashboard tour
+
+| Battery diagnostics | Energy history |
+| --- | --- |
+| ![GoodWe Home Battery page with demo data](docs/images/dashboard-battery-demo.png) | ![GoodWe Home History page with demo data](docs/images/dashboard-history-demo.png) |
+
+These previews are derived from the live interface, but all dates, values, and chart series are synthetic.
 
 ## Quick start
 

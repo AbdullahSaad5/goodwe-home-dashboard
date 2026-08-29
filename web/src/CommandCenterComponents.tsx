@@ -19,6 +19,7 @@ import {
 import { buttonVariants } from '@/components/ui/button';
 import { EnergyChart, Panel, ProjectionChart, StatCard } from './DashboardComponents';
 import { formatDateTime, formatNumber, formatPower, formatTime } from './format';
+import { useReportingTimeZone } from './reportingTimeZone';
 import type {
   CommandCenterResponse,
   CommandHistoryRange,
@@ -135,6 +136,7 @@ export function PowerTrendsPanel({
   setRange: (range: TrendRange) => void;
   initialView?: 'chart' | 'table';
 }) {
+  const timeZone = useReportingTimeZone();
   const [table, setTable] = useState(initialView === 'table');
   return (
     <Panel
@@ -181,7 +183,7 @@ export function PowerTrendsPanel({
             <tbody>
               {data.trend.points.slice(-120).map((point) => (
                 <tr key={point.timestamp}>
-                  <td>{formatTime(point.timestamp)}</td>
+                  <td>{formatTime(point.timestamp, timeZone)}</td>
                   <td>{formatPower(point.pv_w)}</td>
                   <td>{formatPower(point.home_w)}</td>
                   <td>{formatPower(point.battery_w, true)}</td>
@@ -206,6 +208,7 @@ export function PowerTrendsPanel({
 }
 
 export function ProjectionPanel({ data }: { data: CommandCenterResponse }) {
+  const timeZone = useReportingTimeZone();
   const points = useMemo(() => data.projection.points, [data.projection.points]);
   return (
     <Panel
@@ -222,7 +225,10 @@ export function ProjectionPanel({ data }: { data: CommandCenterResponse }) {
               unit="%"
               tone="battery"
             />
-            <StatCard label="Expected at" value={formatTime(data.projection.lowest_soc_at)} />
+            <StatCard
+              label="Expected at"
+              value={formatTime(data.projection.lowest_soc_at, timeZone)}
+            />
             <StatCard label="Reserve policy" value="Protected" tone="battery" />
           </div>
           <ProjectionChart points={points} height={330} />
@@ -382,6 +388,7 @@ export function OutageLogPanel({
   data: CommandCenterResponse;
   onNavigate: (page: Page) => void;
 }) {
+  const timeZone = useReportingTimeZone();
   return (
     <Panel
       title="Grid outage log"
@@ -402,8 +409,8 @@ export function OutageLogPanel({
             <tbody>
               {data.outages.map((outage) => (
                 <tr key={outage.id}>
-                  <td>{formatDateTime(outage.start_at)}</td>
-                  <td>{outage.ongoing ? 'Ongoing' : formatDateTime(outage.end_at)}</td>
+                  <td>{formatDateTime(outage.start_at, timeZone)}</td>
+                  <td>{outage.ongoing ? 'Ongoing' : formatDateTime(outage.end_at, timeZone)}</td>
                   <td>
                     {outage.duration_seconds == null
                       ? '—'
@@ -478,6 +485,7 @@ export function OutlookWatchdogGrid({
   data: CommandCenterResponse;
   onNavigate: (page: Page) => void;
 }) {
+  const timeZone = useReportingTimeZone();
   return (
     <div className="two-column command-two-column">
       <Panel
@@ -501,8 +509,8 @@ export function OutlookWatchdogGrid({
               ))}
             </div>
             <strong className="outlook-window">
-              {formatDateTime(data.outage_outlook.next_window_start)} –{' '}
-              {formatTime(data.outage_outlook.next_window_end)}
+              {formatDateTime(data.outage_outlook.next_window_start, timeZone)} –{' '}
+              {formatTime(data.outage_outlook.next_window_end, timeZone)}
             </strong>
             <p className="panel-note">
               Typical duration {formatNumber(data.outage_outlook.typical_duration_minutes, 0)}{' '}
@@ -539,6 +547,7 @@ export function PerformanceSummaryGrid({
   data: CommandCenterResponse;
   snapshot: Snapshot;
 }) {
+  const timeZone = useReportingTimeZone();
   const reserve = data.live.battery_reserve;
   return (
     <div className="performance-summary-grid">
@@ -623,7 +632,7 @@ export function PerformanceSummaryGrid({
               <strong>
                 {formatNumber(peak.value)} {peak.unit}
               </strong>
-              <small>{formatTime(peak.occurred_at)}</small>
+              <small>{formatTime(peak.occurred_at, timeZone)}</small>
             </article>
           ))}
         </div>
@@ -639,6 +648,7 @@ export function CommandCenterFooter({
   data: CommandCenterResponse;
   snapshot: Snapshot;
 }) {
+  const timeZone = useReportingTimeZone();
   return (
     <div className="command-footer-strip">
       <span>
@@ -655,7 +665,7 @@ export function CommandCenterFooter({
         {formatNumber(snapshot.solar.mppt2.voltage_v, 0)} V
       </span>
       <span>
-        <Clock3 /> {formatDateTime(data.generated_at)}
+        <Clock3 /> {formatDateTime(data.generated_at, timeZone)}
       </span>
       <span>
         <BellRing /> {statusLabel(data.watchdog.status)}

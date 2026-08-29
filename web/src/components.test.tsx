@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import {
   DesktopHeader,
+  HeaderClock,
   MobileNavigation,
   RefreshPill,
   ThemeToggle,
@@ -19,10 +20,11 @@ import {
   PeriodControl,
   animationDuration,
 } from './DashboardComponents';
-import { EventList, LoadingPage } from './DashboardPages';
+import { EventList, LoadingPage, SystemPage } from './DashboardPages';
 import { demoCommandCenter, demoEvents, demoSnapshot } from './demo';
 import { TooltipProvider } from './components/ui/tooltip';
 import { todayInTimeZone } from './period';
+import { ReportingTimeZoneProvider } from './reportingTimeZone';
 
 describe('dashboard interactions', () => {
   it('changes the selected chart period', async () => {
@@ -151,6 +153,33 @@ describe('dashboard interactions', () => {
     expect(refreshCountdown(now + 8_100, now)).toBe(9);
     render(<RefreshPill nextRefreshAt={now + 8_100} connectionState="live" />);
     expect(screen.getByText(/Refresh in/)).toHaveTextContent('Refresh in 9s');
+  });
+
+  it('renders the header clock in the configured reporting timezone', () => {
+    render(
+      <ReportingTimeZoneProvider timeZone="Asia/Karachi">
+        <HeaderClock now={new Date('2026-08-29T10:00:00Z').getTime()} />
+      </ReportingTimeZoneProvider>,
+    );
+    expect(screen.getByText(/3:00:00 PM/)).toBeInTheDocument();
+  });
+
+  it('uses the configured timezone for the reporting label and calendar boundary', () => {
+    render(
+      <ReportingTimeZoneProvider timeZone="America/Toronto">
+        <SystemPage snapshot={demoSnapshot} events={[]} />
+        <HistoryControls
+          period="day"
+          setPeriod={vi.fn()}
+          anchor="2026-08-28"
+          setAnchor={vi.fn()}
+          now={new Date('2026-08-29T02:00:00Z')}
+        />
+      </ReportingTimeZoneProvider>,
+    );
+    expect(screen.getByText('America/Toronto')).toBeInTheDocument();
+    expect(screen.getByLabelText('Chart anchor date')).toHaveAttribute('max', '2026-08-28');
+    expect(screen.getByRole('button', { name: 'Next day' })).toBeDisabled();
   });
 
   it('labels live flow directions without relying on color', () => {

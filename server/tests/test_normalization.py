@@ -91,6 +91,21 @@ def test_normalizes_confirmed_live_snapshot(night_snapshot: dict[str, object]) -
     assert snapshot.system.health == "healthy"
 
 
+def test_uses_configured_timezone_for_naive_inverter_clock(
+    night_snapshot: dict[str, object],
+) -> None:
+    snapshot = normalize_snapshot(
+        night_snapshot,
+        collected_at=datetime(2026, 8, 29, 0, 23, 45, tzinfo=UTC),
+        reporting_timezone="America/Toronto",
+    )
+
+    assert snapshot.connection.reporting_timezone == "America/Toronto"
+    assert snapshot.connection.clock_drift_seconds == pytest.approx(2)
+    assert snapshot.connection.inverter_time is not None
+    assert snapshot.connection.inverter_time.utcoffset().total_seconds() == -4 * 3600
+
+
 def test_falls_back_to_power_balance_when_house_meter_missing(
     night_snapshot: dict[str, object],
 ) -> None:
