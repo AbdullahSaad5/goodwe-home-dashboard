@@ -1,0 +1,16 @@
+name = "goodwe-ingest"
+main = "src/ingest_worker.ts"
+compatibility_date = "2026-08-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "goodwe-dashboard"
+database_id = "REPLACE_AFTER_CREATE"
+
+[[r2_buckets]]
+binding = "ARCHIVES"
+bucket_name = "goodwe-raw-archives"
+
+[vars]
+MAX_CLOCK_SKEW_SECONDS = "900"
+R2_GUARD_BYTES = "9500000000"

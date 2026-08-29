@@ -1,6 +1,8 @@
 # Architecture
 
-GoodWe Home is a local, read-only monitoring application. One Python process collects inverter telemetry, persists history, serves an HTTP API, and hosts a compiled React interface.
+GoodWe Home has two read-only runtimes. The Python/FastAPI application remains the behavioral
+oracle for local development. Production uses an ESP32 collector, Cloudflare archive/API, and a
+password-protected Vercel interface.
 
 ## System boundaries
 
@@ -19,6 +21,18 @@ collector ──► normalization ──► SQLite
 ```
 
 The browser never talks to the inverter directly. The server exposes no endpoints that alter inverter settings.
+
+The production boundary is:
+
+```text
+GoodWe inverter -> ESP32 -> authenticated HTTPS -> Worker -> R2 + D1
+                                                        -> Vercel dashboard
+```
+
+`firmware/` contains only the four approved Modbus/TCP reads and a LittleFS-backed upload queue.
+`cloud/` owns `GWR1` verification, the pinned 145-field decoder, idempotent persistence,
+authentication, retention, forecast isolation, and the dashboard API. Production replaces SSE with
+authenticated ten-second status polling; the local oracle retains SSE.
 
 ## Backend modules
 
@@ -84,6 +98,9 @@ An inline bootstrap in `web/index.html` resolves the saved appearance or the fir
 - Network discovery is local and bounded.
 - Runtime addresses and telemetry are never source-controlled.
 - API response shapes are defined by Pydantic models and covered by contract tests.
+- The cloud TypeScript API preserves those response contracts and is covered by matching tests.
+- Production raw archives are immutable, lossless, content-verified, and never automatically deleted.
+- Cloud failure never runs on or blocks the firmware polling task.
 - The frontend consumes the server API rather than protocol-specific data.
 - React never reimplements command-center formulas or substitutes zero for unavailable facts.
 - Forecast failures cannot stop or delay inverter collection.

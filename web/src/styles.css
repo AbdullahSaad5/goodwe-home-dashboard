@@ -3576,3 +3576,63 @@ html[data-theme='dark'] {
     display: inline-flex;
   }
 }
+/* The login shell is the only application code loaded before authentication. */
+.login-shell {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+  background: radial-gradient(circle at top, #eef8f6, #f7f9fc 55%);
+  color: #16202a;
+}
+
+.login-card {
+  width: min(100%, 28rem);
+  display: grid;
+  gap: 1rem;
+  padding: 2rem;
+  border: 1px solid #dce5e4;
+  border-radius: 1.25rem;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 1.25rem 4rem rgba(20, 48, 54, 0.12);
+}
+
+.login-card h1,
+.login-card p {
+  margin: 0;
+}
+.login-card label {
+  font-weight: 650;
+}
+.login-card input {
+  min-height: 3rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid #bccdca;
+  border-radius: 0.7rem;
+  font: inherit;
+}
+.login-card button {
+  min-height: 3rem;
+  border: 0;
+  border-radius: 0.7rem;
+  background: #ec1c24;
+  color: white;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+.login-card button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+.login-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+.login-error {
+  color: #a5171d;
+}
+.turnstile-slot {
+  min-height: 4rem;
+}

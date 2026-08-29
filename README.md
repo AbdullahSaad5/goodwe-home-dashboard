@@ -170,21 +170,27 @@ Refreshing data does not reset an active chart zoom. Changing a trend range, his
 
 ## Architecture
 
-- **Collector:** Python and `goodwe` read local inverter telemetry.
-- **Storage:** SQLite stores snapshots, aggregates, events, and the last working address.
-- **API:** FastAPI exposes read-only JSON, CSV, and SSE endpoints.
-- **Interface:** React, TypeScript, Vite, ECharts, Motion, Radix UI, and Tailwind CSS.
+- **Desktop oracle:** Python, FastAPI, and SQLite remain the local development and comparison path.
+- **Production collector:** ESP-IDF firmware polls the inverter read-only and buffers lossless `GWR1`
+  archives in LittleFS.
+- **Cloud:** Authenticated Cloudflare Workers store immutable raw archives in R2 and queryable
+  telemetry in D1.
+- **Interface:** React/Vite runs on Vercel behind Turnstile and a signed session cookie.
 
-The browser communicates only with the local FastAPI service. It does not connect directly to the inverter.
+The browser never connects to the inverter. Local development uses FastAPI; production uses the
+same-origin authenticated Worker API.
 
 The source is separated by runtime boundary:
 
 - `server/src/goodwe_home/` contains the installable Python package.
 - `server/tests/` contains backend tests.
+- `firmware/` contains the read-only ESP32 collector and host protocol/archive tests.
+- `cloud/` contains the Worker ingestion, archive decoder, authentication, and dashboard API.
 - `web/src/` contains the React application and frontend tests.
 - `docs/` contains deeper technical documentation.
 
-See [Architecture](docs/architecture.md) for module responsibilities, data flow, and extension guidance.
+See [Architecture](docs/architecture.md) for module responsibilities and
+[ESP32 cloud deployment](docs/esp32-cloud-deployment.md) for the production rollout.
 
 ## Development
 
@@ -219,10 +225,12 @@ See [Contributing](CONTRIBUTING.md) for the complete development workflow and pu
 
 - Inverter communication is read-only.
 - No inverter credentials or IP addresses are committed to Git.
-- Telemetry and history stay on the local machine.
+- Production telemetry is sent only as authenticated outbound HTTPS, retained in the configured
+  private Cloudflare account, and shown only after dashboard authentication.
 - When forecasting is enabled, site coordinates—but never inverter telemetry—are sent to Open-Meteo.
 - Desktop notifications are foreground-only and require localhost or HTTPS; in-app alerts remain available everywhere.
 - The SQLite database and environment files are ignored by Git.
+- Wi-Fi, HMAC, session, passphrase, location, inverter, and telemetry values stay out of Git and logs.
 - No configuration or control endpoints are exposed.
 
 Review your network rules before running the server on an untrusted or shared network.

@@ -168,6 +168,10 @@ export function useDashboard(
   }, [refreshDashboardData]);
 
   useEffect(() => {
+    if (!import.meta.env.DEV) {
+      const timer = window.setInterval(() => void refreshSnapshot(), DEFAULT_LIVE_REFRESH_MS);
+      return () => window.clearInterval(timer);
+    }
     const stream = new EventSource('/api/v1/stream');
     stream.addEventListener('snapshot', (event) => {
       try {
@@ -182,7 +186,7 @@ export function useDashboard(
       }
     });
     return () => stream.close();
-  }, [noteSnapshotArrival, refreshDashboardData]);
+  }, [noteSnapshotArrival, refreshDashboardData, refreshSnapshot]);
 
   return {
     snapshot,

@@ -9,6 +9,7 @@ import {
   Grid3X3,
   History,
   LayoutDashboard,
+  LogOut,
   Menu,
   Maximize2,
   Minimize2,
@@ -58,6 +59,7 @@ import {
 import { ThemeProvider, persistTheme, readStoredTheme, resolveTheme, type Theme } from './theme';
 import type { CommandHistoryRange, EventItem, Page, Period, Snapshot, TrendRange } from './types';
 import { useDashboard } from './useDashboard';
+import { api } from './api';
 
 interface NavigationItem {
   page: Page;
@@ -463,6 +465,16 @@ export function DesktopHeader({
               <Settings />
               System diagnostics
             </DropdownMenuItem>
+            {!import.meta.env.DEV ? (
+              <DropdownMenuItem
+                onSelect={() => {
+                  void api.logout().finally(() => window.location.reload());
+                }}
+              >
+                <LogOut />
+                Sign out
+              </DropdownMenuItem>
+            ) : null}
             <DropdownMenuSeparator />
             <DropdownMenuLabel>
               <span className="menu-status">

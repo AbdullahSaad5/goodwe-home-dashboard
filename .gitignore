@@ -49,3 +49,10 @@ next-env.d.ts
 /.wrangler/
 /outputs/
 /work/
+.private/
+private/
+cloud/.dev.vars
+firmware/build/
+firmware/build-host/
+firmware/sdkconfig
+firmware/managed_components/

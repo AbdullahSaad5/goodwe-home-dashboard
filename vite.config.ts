@@ -13,10 +13,10 @@ export default defineConfig({
         codeSplitting: {
           minSize: 20_000,
           groups: [
+            { name: 'react', test: /node_modules\/(react|react-dom|scheduler|@radix-ui)/ },
             { name: 'charts', test: /node_modules\/echarts/ },
             { name: 'renderer', test: /node_modules\/zrender/ },
             { name: 'motion', test: /node_modules\/(motion|framer-motion|@motionone)/ },
-            { name: 'react', test: /node_modules\/(react|react-dom|scheduler|@radix-ui)/ },
           ],
         },
       },

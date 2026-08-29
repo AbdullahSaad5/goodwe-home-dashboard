@@ -11,12 +11,33 @@ import type {
 } from './types';
 
 async function getJson<T>(path: string): Promise<T> {
-  const response = await fetch(path, { headers: { Accept: 'application/json' } });
+  const response = await fetch(path, {
+    credentials: 'same-origin',
+    headers: { Accept: 'application/json' },
+  });
+  if (response.status === 401) window.dispatchEvent(new Event('goodwe-auth-required'));
   if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
   return response.json() as Promise<T>;
 }
 
 export const api = {
+  session: () => getJson<{ authenticated: boolean }>('/api/v1/auth/session'),
+  login: async (passphrase: string, turnstileToken: string) => {
+    const response = await fetch('/api/v1/auth/login', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ passphrase, turnstileToken }),
+    });
+    if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+  },
+  logout: async () => {
+    const response = await fetch('/api/v1/auth/logout', {
+      method: 'POST',
+      credentials: 'same-origin',
+    });
+    if (!response.ok) throw new Error(`${response.status} ${response.statusText}`);
+  },
   status: () => getJson<Snapshot>('/api/v1/status'),
   history: (period: Period, anchor?: string) =>
     getJson<HistoryResponse>(

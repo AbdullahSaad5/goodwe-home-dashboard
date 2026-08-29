@@ -1,0 +1,15 @@
+cmake_minimum_required(VERSION 3.22)
+project(goodwe_firmware_host_tests LANGUAGES CXX)
+
+enable_testing()
+add_executable(gwr1_test gwr1_test.cpp ../components/gwr1/gwr1.cpp)
+target_include_directories(gwr1_test PRIVATE ../components/gwr1/include)
+target_compile_features(gwr1_test PRIVATE cxx_std_20)
+target_compile_options(gwr1_test PRIVATE -Wall -Wextra -Werror)
+add_test(NAME gwr1_test COMMAND gwr1_test)
+
+add_executable(goodwe_protocol_test goodwe_protocol_test.cpp ../components/goodwe_protocol/goodwe_protocol.cpp)
+target_include_directories(goodwe_protocol_test PRIVATE ../components/goodwe_protocol/include)
+target_compile_features(goodwe_protocol_test PRIVATE cxx_std_20)
+target_compile_options(goodwe_protocol_test PRIVATE -Wall -Wextra -Werror)
+add_test(NAME goodwe_protocol_test COMMAND goodwe_protocol_test)
