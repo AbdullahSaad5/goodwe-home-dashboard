@@ -62,6 +62,7 @@ cd goodwe-home-dashboard
 Open [http://localhost:8080](http://localhost:8080). Other devices on the same network can use `http://<computer-ip>:8080`.
 
 The dashboard is intended for trusted local networks. Do not expose port 8080 or the inverter directly to the public internet.
+`start.sh` builds a separate trusted-LAN frontend in `web/dist-local`; the Vercel production build remains password-protected in `web/dist`.
 
 ## Inverter discovery
 
