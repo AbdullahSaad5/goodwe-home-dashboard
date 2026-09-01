@@ -28,6 +28,18 @@ def parse_args() -> argparse.Namespace:
         required=True,
         help="Path to the complete pre-write 4 MB flash backup",
     )
+    parser.add_argument(
+        "--deployment",
+        type=Path,
+        default=REPOSITORY / ".private/deployment.json",
+        help="Local private deployment record containing the ESP32 cloud identity",
+    )
+    parser.add_argument(
+        "--environment-file",
+        type=Path,
+        default=REPOSITORY / ".env",
+        help="Local desktop environment file containing the validated inverter address",
+    )
     return parser.parse_args()
 
 
@@ -44,6 +56,39 @@ def prompt_secret(label: str, minimum: int = 1) -> str:
     if len(value) < minimum:
         raise SystemExit(f"{label} must contain at least {minimum} characters")
     return value
+
+
+def read_environment(path: Path) -> dict[str, str]:
+    if not path.is_file():
+        return {}
+    values: dict[str, str] = {}
+    for line in path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, value = stripped.split("=", 1)
+        values[key.strip()] = value.strip().strip('"').strip("'")
+    return values
+
+
+def load_cloud_identity(path: Path) -> tuple[str, str, str]:
+    if not path.is_file():
+        raise SystemExit(f"Local deployment record does not exist: {path}")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    device_id = str(payload.get("DEVICE_ID", ""))
+    device_secret = str(payload.get("DEVICE_SECRET", ""))
+    ingestion_url = str(payload.get("INGESTION_URL", "")).rstrip("/")
+    if not ingestion_url.endswith("/ingest/v1/batches"):
+        ingestion_url += "/ingest/v1/batches"
+    if len(device_secret) < 64:
+        raise SystemExit("The local deployment record has no valid device secret")
+    try:
+        uuid.UUID(device_id)
+    except ValueError as error:
+        raise SystemExit("The local deployment record has no valid device UUID") from error
+    if not ingestion_url.startswith("https://"):
+        raise SystemExit("The local deployment record has no HTTPS ingestion URL")
+    return device_id, device_secret, ingestion_url
 
 
 def idf_environment() -> dict[str, str]:
@@ -74,17 +119,12 @@ def main() -> None:
     backup_hash = validate_backup(args.backup)
     print("Values stay local and are entered with hidden prompts where appropriate.")
     ssid = input("2.4 GHz Wi-Fi SSID: ").strip()
+    if not ssid:
+        raise SystemExit("Wi-Fi SSID cannot be empty")
     wifi_password = prompt_secret("Wi-Fi password", 8)
-    inverter_address = input("Optional fixed inverter IPv4 address (Enter for discovery): ").strip()
-    ingest_url = input("Cloudflare ingestion URL ending /ingest/v1/batches: ").strip()
-    if not ingest_url.startswith("https://") or not ingest_url.endswith("/ingest/v1/batches"):
-        raise SystemExit("The ingestion URL must be HTTPS and end with /ingest/v1/batches")
-    device_secret = prompt_secret("Device HMAC secret (64+ characters)", 64)
-    device_id = input("Device UUID (Enter to generate): ").strip() or str(uuid.uuid4())
-    try:
-        uuid.UUID(device_id)
-    except ValueError as error:
-        raise SystemExit("Device UUID is invalid") from error
+    inverter_address = read_environment(args.environment_file).get("GOODWE_HOST", "")
+    device_id, device_secret, ingest_url = load_cloud_identity(args.deployment)
+    print("Loaded the inverter address and cloud identity from private local files.")
     decoder_hash = hashlib.sha256(
         (REPOSITORY / "cloud/decoder-manifest.json").read_bytes()
     ).hexdigest()
