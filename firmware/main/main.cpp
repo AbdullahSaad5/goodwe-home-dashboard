@@ -144,6 +144,9 @@ void wifi_handler(void*, esp_event_base_t base, std::int32_t id, void* data) {
   if (base == IP_EVENT && id == IP_EVENT_STA_GOT_IP) {
     ESP_LOGI(tag, "Wi-Fi connected and received an address");
     xEventGroupSetBits(wifi_events, wifi_connected);
+    if (esp_sntp_enabled() && !esp_sntp_restart()) {
+      ESP_LOGW(tag, "Unable to restart network time synchronization");
+    }
   }
 }
 
@@ -333,6 +336,7 @@ std::uint64_t allocate_sequence() {
 void poll_task(void*) {
   ESP_ERROR_CHECK(esp_task_wdt_add(nullptr));
   std::uint16_t transaction = 100;
+  bool waiting_for_time = false;
   TickType_t next_wake = xTaskGetTickCount();
   for (;;) {
     xTaskDelayUntil(&next_wake, poll_interval);
@@ -356,8 +360,16 @@ void poll_task(void*) {
       continue;
     }
     if (esp_sntp_get_sync_status() != SNTP_SYNC_STATUS_COMPLETED) {
+      if (!waiting_for_time) {
+        ESP_LOGW(tag, "Waiting for network time synchronization before archiving telemetry");
+        waiting_for_time = true;
+      }
       record_dropped_range(sequence, sequence);
       continue;
+    }
+    if (waiting_for_time) {
+      ESP_LOGI(tag, "Network time synchronization completed");
+      waiting_for_time = false;
     }
     auto sample = new Poll();
     sample->utc_ms = static_cast<std::uint64_t>(time(nullptr)) * 1000ULL;
