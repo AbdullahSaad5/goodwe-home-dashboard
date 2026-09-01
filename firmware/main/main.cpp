@@ -132,13 +132,19 @@ bool load_config() {
   return valid;
 }
 
-void wifi_handler(void*, esp_event_base_t base, std::int32_t id, void*) {
+void wifi_handler(void*, esp_event_base_t base, std::int32_t id, void* data) {
   if (base == WIFI_EVENT && id == WIFI_EVENT_STA_START) esp_wifi_connect();
   if (base == WIFI_EVENT && id == WIFI_EVENT_STA_DISCONNECTED) {
+    const auto* disconnected = static_cast<const wifi_event_sta_disconnected_t*>(data);
+    ESP_LOGW(tag, "Wi-Fi disconnected (reason %u)",
+             disconnected == nullptr ? 0U : static_cast<unsigned>(disconnected->reason));
     xEventGroupClearBits(wifi_events, wifi_connected);
     esp_wifi_connect();
   }
-  if (base == IP_EVENT && id == IP_EVENT_STA_GOT_IP) xEventGroupSetBits(wifi_events, wifi_connected);
+  if (base == IP_EVENT && id == IP_EVENT_STA_GOT_IP) {
+    ESP_LOGI(tag, "Wi-Fi connected and received an address");
+    xEventGroupSetBits(wifi_events, wifi_connected);
+  }
 }
 
 void start_wifi() {
