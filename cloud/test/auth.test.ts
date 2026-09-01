@@ -108,6 +108,26 @@ describe('dashboard authentication', () => {
     expect(blocked.status).toBe(429);
   });
 
+  it('rejects a verifier above the Cloudflare PBKDF2 limit without throwing', async () => {
+    const response = await handleAuthRequest(
+      new Request('https://dashboard.example/api/v1/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'CF-Connecting-IP': '192.0.2.12' },
+        body: JSON.stringify({
+          passphrase: 'correct horse battery staple with several extra words',
+          turnstileToken: 'human-token',
+        }),
+      }),
+      {
+        ...config,
+        passphraseVerifier: { ...config.passphraseVerifier, iterations: 100_001 },
+      },
+      throttle,
+    );
+
+    expect(response.status).toBe(401);
+  });
+
   it('expires the browser cookie on logout', async () => {
     const response = await handleAuthRequest(
       new Request('https://dashboard.example/api/v1/auth/logout', { method: 'POST' }),

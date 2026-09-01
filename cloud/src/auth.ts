@@ -72,7 +72,7 @@ async function derivePassphrase(
 export async function createPassphraseVerifier(
   passphrase: string,
   salt: Uint8Array = crypto.getRandomValues(new Uint8Array(16)),
-  iterations = 600_000,
+  iterations = 100_000,
 ): Promise<PassphraseVerifier> {
   if (passphrase.length < 12) throw new Error('Passphrase must contain at least 12 characters');
   return {
@@ -87,7 +87,15 @@ async function verifyPassphrase(
   passphrase: string,
   verifier: PassphraseVerifier,
 ): Promise<boolean> {
-  if (verifier.algorithm !== 'PBKDF2-SHA256' || verifier.iterations < 10_000) return false;
+  // Cloudflare Workers currently rejects PBKDF2 requests above 100,000 iterations.
+  // Treat an out-of-range verifier as invalid instead of letting Web Crypto turn
+  // a login attempt into an HTTP 500 response.
+  if (
+    verifier.algorithm !== 'PBKDF2-SHA256' ||
+    verifier.iterations < 10_000 ||
+    verifier.iterations > 100_000
+  )
+    return false;
   const expected = hexToBytes(verifier.hash);
   const actual = await derivePassphrase(passphrase, hexToBytes(verifier.salt), verifier.iterations);
   if (actual.length !== expected.length) return false;

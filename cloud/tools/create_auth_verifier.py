@@ -31,7 +31,8 @@ def main() -> None:
             f"{MIN_PASSPHRASE_LENGTH} characters"
         )
     salt = secrets.token_bytes(16)
-    iterations = 600_000
+    # Cloudflare Workers Web Crypto accepts at most 100,000 PBKDF2 iterations.
+    iterations = 100_000
     verifier = {
         "algorithm": "PBKDF2-SHA256",
         "iterations": iterations,
