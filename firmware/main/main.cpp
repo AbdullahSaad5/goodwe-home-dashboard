@@ -71,7 +71,14 @@ Config config;
 std::string inverter_address;
 std::atomic<std::uint64_t> next_sequence{};
 std::atomic<std::uint64_t> reserved_end{};
+std::atomic<bool> clock_synchronized{};
 std::vector<std::uint8_t> device_info_frame;
+
+void time_sync_notification(timeval*) {
+  if (!clock_synchronized.exchange(true)) {
+    ESP_LOGI(tag, "Network time synchronization completed");
+  }
+}
 
 void record_dropped_range(const std::uint64_t first, const std::uint64_t last) {
   nvs_handle_t handle;
@@ -359,7 +366,7 @@ void poll_task(void*) {
       clear_inverter_address(address);
       continue;
     }
-    if (esp_sntp_get_sync_status() != SNTP_SYNC_STATUS_COMPLETED) {
+    if (!clock_synchronized.load()) {
       if (!waiting_for_time) {
         ESP_LOGW(tag, "Waiting for network time synchronization before archiving telemetry");
         waiting_for_time = true;
@@ -367,10 +374,7 @@ void poll_task(void*) {
       record_dropped_range(sequence, sequence);
       continue;
     }
-    if (waiting_for_time) {
-      ESP_LOGI(tag, "Network time synchronization completed");
-      waiting_for_time = false;
-    }
+    waiting_for_time = false;
     auto sample = new Poll();
     sample->utc_ms = static_cast<std::uint64_t>(time(nullptr)) * 1000ULL;
     sample->timestamp_source = 1;
@@ -655,6 +659,7 @@ extern "C" void app_main() {
   start_wifi();
   esp_sntp_setoperatingmode(SNTP_OPMODE_POLL);
   esp_sntp_setservername(0, const_cast<char*>("pool.ntp.org"));
+  esp_sntp_set_time_sync_notification_cb(time_sync_notification);
   esp_sntp_init();
   sample_queue = xQueueCreate(36, sizeof(Poll*));
   inverter_mutex = xSemaphoreCreateMutex();
