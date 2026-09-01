@@ -344,6 +344,7 @@ void poll_task(void*) {
   ESP_ERROR_CHECK(esp_task_wdt_add(nullptr));
   std::uint16_t transaction = 100;
   bool waiting_for_time = false;
+  bool first_sample_queued = false;
   TickType_t next_wake = xTaskGetTickCount();
   for (;;) {
     xTaskDelayUntil(&next_wake, poll_interval);
@@ -362,6 +363,7 @@ void poll_task(void*) {
     const auto battery = read_frame(address, transaction++, goodwe_protocol::ReadRange::battery);
     const auto meter = read_frame(address, transaction++, goodwe_protocol::ReadRange::meter);
     if (!runtime || !battery || !meter) {
+      ESP_LOGW(tag, "A telemetry frame read failed; rediscovering the inverter");
       record_dropped_range(sequence, sequence);
       clear_inverter_address(address);
       continue;
@@ -381,8 +383,12 @@ void poll_task(void*) {
     sample->sequence = sequence;
     sample->frames = {*runtime, *battery, *meter};
     if (xQueueSend(sample_queue, &sample, 0) != pdTRUE) {
+      ESP_LOGW(tag, "The telemetry archive queue is full");
       record_dropped_range(sample->sequence, sample->sequence);
       delete sample;
+    } else if (!first_sample_queued) {
+      ESP_LOGI(tag, "Queued the first complete telemetry sample");
+      first_sample_queued = true;
     }
   }
 }
@@ -664,8 +670,16 @@ extern "C" void app_main() {
   sample_queue = xQueueCreate(36, sizeof(Poll*));
   inverter_mutex = xSemaphoreCreateMutex();
   ESP_ERROR_CHECK(sample_queue && inverter_mutex ? ESP_OK : ESP_ERR_NO_MEM);
-  xTaskCreate(discovery_task, "discovery", 6144, nullptr, 5, nullptr);
-  xTaskCreate(poll_task, "goodwe_poll", 8192, nullptr, 8, nullptr);
-  xTaskCreate(archive_task, "archive", 10'240, nullptr, 6, nullptr);
-  xTaskCreate(upload_task, "upload", 10'240, nullptr, 4, nullptr);
+  ESP_ERROR_CHECK(xTaskCreate(discovery_task, "discovery", 6144, nullptr, 5, nullptr) == pdPASS
+                      ? ESP_OK
+                      : ESP_ERR_NO_MEM);
+  ESP_ERROR_CHECK(xTaskCreate(poll_task, "goodwe_poll", 8192, nullptr, 8, nullptr) == pdPASS
+                      ? ESP_OK
+                      : ESP_ERR_NO_MEM);
+  ESP_ERROR_CHECK(xTaskCreate(archive_task, "archive", 10'240, nullptr, 6, nullptr) == pdPASS
+                      ? ESP_OK
+                      : ESP_ERR_NO_MEM);
+  ESP_ERROR_CHECK(xTaskCreate(upload_task, "upload", 10'240, nullptr, 4, nullptr) == pdPASS
+                      ? ESP_OK
+                      : ESP_ERR_NO_MEM);
 }
