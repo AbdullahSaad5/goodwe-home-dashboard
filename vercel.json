@@ -6,7 +6,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://REPLACE_WITH_DASHBOARD_WORKER.workers.dev/api/:path*"
+      "destination": "https://goodwe-dashboard-api.goodwe-home-dashboard.workers.dev/api/:path*"
     },
     { "source": "/(.*)", "destination": "/index.html" }
   ]

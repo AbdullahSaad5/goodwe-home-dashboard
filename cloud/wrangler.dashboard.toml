@@ -5,7 +5,7 @@ compatibility_date = "2026-08-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "goodwe-dashboard"
-database_id = "REPLACE_AFTER_CREATE"
+database_id = "93bb6300-536e-47e1-93fe-818868fc5791"
 
 [[r2_buckets]]
 binding = "ARCHIVES"
