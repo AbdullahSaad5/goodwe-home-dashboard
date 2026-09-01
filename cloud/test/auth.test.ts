@@ -4,6 +4,7 @@ import {
   handleAuthRequest,
   type AuthConfig,
   type AuthThrottle,
+  verifyTurnstile,
 } from '../src/auth';
 
 class MemoryThrottle implements AuthThrottle {
@@ -115,5 +116,24 @@ describe('dashboard authentication', () => {
     );
     expect(response.status).toBe(204);
     expect(response.headers.get('Set-Cookie')).toContain('Max-Age=0');
+  });
+
+  it('does not bind Turnstile verification to the Vercel proxy address', async () => {
+    const originalFetch = globalThis.fetch;
+    let submitted: FormData | undefined;
+    globalThis.fetch = async (_input, init) => {
+      submitted = init?.body as FormData;
+      return Response.json({ success: true });
+    };
+    try {
+      await expect(
+        verifyTurnstile('human-token', '198.51.100.20', 'turnstile-secret'),
+      ).resolves.toBe(true);
+      expect(submitted?.get('response')).toBe('human-token');
+      expect(submitted?.get('secret')).toBe('turnstile-secret');
+      expect(submitted?.has('remoteip')).toBe(false);
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   });
 });

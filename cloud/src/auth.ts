@@ -74,7 +74,7 @@ export async function createPassphraseVerifier(
   salt: Uint8Array = crypto.getRandomValues(new Uint8Array(16)),
   iterations = 600_000,
 ): Promise<PassphraseVerifier> {
-  if (passphrase.length < 20) throw new Error('Passphrase must contain at least 20 characters');
+  if (passphrase.length < 12) throw new Error('Passphrase must contain at least 12 characters');
   return {
     algorithm: 'PBKDF2-SHA256',
     iterations,
@@ -213,13 +213,16 @@ export async function handleAuthRequest(
 
 export async function verifyTurnstile(
   token: string,
-  remoteIp: string,
+  _remoteIp: string,
   secret: string,
 ): Promise<boolean> {
   const body = new FormData();
   body.set('secret', secret);
   body.set('response', token);
-  if (remoteIp !== 'unknown') body.set('remoteip', remoteIp);
+  // Vercel's external rewrite reaches the Worker from a proxy address, not the
+  // browser address bound to the Turnstile token. The remoteip field is optional;
+  // omitting it keeps verification correct while CF-Connecting-IP still keys the
+  // server-side throttle.
   const result = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
     method: 'POST',
     body,

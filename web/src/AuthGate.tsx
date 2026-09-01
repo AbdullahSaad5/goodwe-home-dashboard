@@ -84,7 +84,7 @@ export function LoginShell({ onAuthenticated }: { onAuthenticated: () => void })
           name="passphrase"
           type="password"
           autoComplete="current-password"
-          minLength={20}
+          minLength={12}
           required
           value={passphrase}
           onChange={(event) => setPassphrase(event.target.value)}
