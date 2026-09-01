@@ -304,6 +304,7 @@ void discovery_task(void*) {
       if (const auto found = locate_inverter()) {
         set_inverter_address(*found);
         save_validated_address(*found);
+        ESP_LOGI(tag, "Validated the inverter connection");
       }
     }
     vTaskDelay(pdMS_TO_TICKS(30'000));
@@ -426,6 +427,9 @@ void write_batch(const std::vector<Poll>& polls) {
   if (std::rename(temporary_path.c_str(), path) != 0) {
     std::remove(temporary_path.c_str());
     record_dropped_range(polls.front().sequence, polls.back().sequence);
+  } else {
+    ESP_LOGI(tag, "Archived a telemetry batch with %u samples",
+             static_cast<unsigned>(polls.size()));
   }
 }
 
@@ -556,10 +560,17 @@ bool upload_file(const std::string& path, const std::string& name) {
   const esp_err_t result = esp_http_client_perform(client);
   const int status = esp_http_client_get_status_code(client);
   esp_http_client_cleanup(client);
-  return result == ESP_OK && (status == 200 || status == 201) &&
-         json_string(response.body, "firstSequence") == std::optional(first_text) &&
-         json_string(response.body, "lastSequence") == std::optional(last_text) &&
-         json_string(response.body, "bodySha256") == std::optional(hash);
+  const bool accepted = result == ESP_OK && (status == 200 || status == 201) &&
+                        json_string(response.body, "firstSequence") == std::optional(first_text) &&
+                        json_string(response.body, "lastSequence") == std::optional(last_text) &&
+                        json_string(response.body, "bodySha256") == std::optional(hash);
+  if (accepted) {
+    ESP_LOGI(tag, "Cloud acknowledged a telemetry batch");
+  } else {
+    ESP_LOGW(tag, "Telemetry upload failed (transport %s, HTTP %d)",
+             esp_err_to_name(result), status);
+  }
+  return accepted;
 }
 
 void upload_task(void*) {

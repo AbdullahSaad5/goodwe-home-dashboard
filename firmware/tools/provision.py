@@ -7,10 +7,12 @@ import argparse
 import csv
 import getpass
 import hashlib
+import ipaddress
 import json
 import os
 import subprocess
 import tempfile
+import urllib.request
 import uuid
 from pathlib import Path
 
@@ -39,6 +41,11 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=REPOSITORY / ".env",
         help="Local desktop environment file containing the validated inverter address",
+    )
+    parser.add_argument(
+        "--nvs-only",
+        action="store_true",
+        help="Write only the provisioning partition; preserve the application and archive partitions",
     )
     return parser.parse_args()
 
@@ -69,6 +76,22 @@ def read_environment(path: Path) -> dict[str, str]:
         key, value = stripped.split("=", 1)
         values[key.strip()] = value.strip().strip('"').strip("'")
     return values
+
+
+def active_inverter_address(environment_file: Path) -> str:
+    configured = read_environment(environment_file).get("GOODWE_HOST", "")
+    try:
+        with urllib.request.urlopen("http://127.0.0.1:8080/api/v1/health", timeout=2) as response:
+            payload = json.load(response)
+        candidate = str(payload.get("host", ""))
+        ipaddress.ip_address(candidate)
+        if payload.get("ok") is True and payload.get("state") == "live":
+            print("Loaded the currently validated inverter address from the local collector.")
+            return candidate
+    except (OSError, ValueError, json.JSONDecodeError):
+        pass
+    print("Loaded the configured inverter address from the local environment file.")
+    return configured
 
 
 def load_cloud_identity(path: Path) -> tuple[str, str, str]:
@@ -122,7 +145,7 @@ def main() -> None:
     if not ssid:
         raise SystemExit("Wi-Fi SSID cannot be empty")
     wifi_password = prompt_secret("Wi-Fi password", 8)
-    inverter_address = read_environment(args.environment_file).get("GOODWE_HOST", "")
+    inverter_address = active_inverter_address(args.environment_file)
     device_id, device_secret, ingest_url = load_cloud_identity(args.deployment)
     print("Loaded the inverter address and cloud identity from private local files.")
     decoder_hash = hashlib.sha256(
@@ -172,15 +195,20 @@ def main() -> None:
             cwd=FIRMWARE,
             env=environment,
         )
-        print(f"Prepared firmware for {PORT}; the verified original backup will not be modified.")
-        if input('Type "FLASH" to replace the current firmware: ').strip() != "FLASH":
-            raise SystemExit("Cancelled without writing the ESP32")
-        subprocess.run(
-            [str(python), str(idf_command), "-p", PORT, "flash"],
-            check=True,
-            cwd=FIRMWARE,
-            env=environment,
-        )
+        if args.nvs_only:
+            print(f"Prepared NVS provisioning for {PORT}; application and archive data will be preserved.")
+            if input('Type "WRITE" to replace the provisioning partition: ').strip() != "WRITE":
+                raise SystemExit("Cancelled without writing the ESP32")
+        else:
+            print(f"Prepared firmware for {PORT}; the verified original backup will not be modified.")
+            if input('Type "FLASH" to replace the current firmware: ').strip() != "FLASH":
+                raise SystemExit("Cancelled without writing the ESP32")
+            subprocess.run(
+                [str(python), str(idf_command), "-p", PORT, "flash"],
+                check=True,
+                cwd=FIRMWARE,
+                env=environment,
+            )
         subprocess.run(
             [
                 str(python),
