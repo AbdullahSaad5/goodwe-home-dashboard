@@ -3,14 +3,20 @@ from __future__ import annotations
 import asyncio
 import logging
 from contextlib import suppress
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Protocol
+from zoneinfo import ZoneInfo
 
 import httpx
 
 from .config import Settings
 from .database import DashboardDatabase
-from .models import ForecastPoint, ForecastRun
+from .models import ForecastPoint, ForecastRun, WeatherDay
+
+DAILY_WEATHER_VARIABLES = (
+    "weather_code,temperature_2m_max,temperature_2m_min,"
+    "precipitation_probability_max,precipitation_sum,wind_speed_10m_max,sunrise,sunset"
+)
 
 logger = logging.getLogger(__name__)
 
@@ -36,8 +42,9 @@ class OpenMeteoForecastProvider:
             "latitude": self.settings.site_latitude or 0,
             "longitude": self.settings.site_longitude or 0,
             "hourly": variable,
-            "forecast_days": 3,
-            "timezone": "UTC",
+            "daily": DAILY_WEATHER_VARIABLES,
+            "forecast_days": 7,
+            "timezone": self.settings.timezone,
         }
         if tilted:
             params["tilt"] = self.settings.pv_tilt_deg or 0
@@ -51,11 +58,12 @@ class OpenMeteoForecastProvider:
         hourly = payload.get("hourly", {})
         times = hourly.get("time", [])
         values = hourly.get(variable, [])
+        reporting_timezone = ZoneInfo(self.settings.timezone)
         points: list[ForecastPoint] = []
         for timestamp, raw_irradiance in zip(times, values, strict=False):
             parsed = datetime.fromisoformat(timestamp)
             if parsed.tzinfo is None:
-                parsed = parsed.replace(tzinfo=UTC)
+                parsed = parsed.replace(tzinfo=reporting_timezone)
             irradiance = max(0, float(raw_irradiance or 0))
             pv_w = (
                 irradiance / 1000 * self.settings.pv_array_kwp * 1000 * 0.8
@@ -63,11 +71,43 @@ class OpenMeteoForecastProvider:
                 else None
             )
             points.append(ForecastPoint(timestamp=parsed, irradiance_w_m2=irradiance, pv_w=pv_w))
+
+        daily = payload.get("daily", {})
+
+        def daily_value(name: str, index: int, default: float = 0) -> float:
+            values = daily.get(name, [])
+            value = values[index] if index < len(values) else default
+            return float(value if value is not None else default)
+
+        def local_timestamp(name: str, index: int) -> datetime | None:
+            values = daily.get(name, [])
+            if index >= len(values) or not values[index]:
+                return None
+            parsed = datetime.fromisoformat(values[index])
+            return parsed if parsed.tzinfo else parsed.replace(tzinfo=reporting_timezone)
+
+        weather_days = [
+            WeatherDay(
+                day=date.fromisoformat(day),
+                weather_code=int(daily_value("weather_code", index)),
+                temperature_max_c=daily_value("temperature_2m_max", index),
+                temperature_min_c=daily_value("temperature_2m_min", index),
+                precipitation_probability_max_pct=daily_value(
+                    "precipitation_probability_max", index
+                ),
+                precipitation_mm=daily_value("precipitation_sum", index),
+                wind_speed_max_kph=daily_value("wind_speed_10m_max", index),
+                sunrise=local_timestamp("sunrise", index),
+                sunset=local_timestamp("sunset", index),
+            )
+            for index, day in enumerate(daily.get("time", []))
+        ]
         return ForecastRun(
             provider=self.name,
             issued_at=now,
             points=points,
-            metadata={"variable": variable, "timezone": "UTC"},
+            weather_days=weather_days,
+            metadata={"variable": variable, "timezone": self.settings.timezone},
         )
 
 

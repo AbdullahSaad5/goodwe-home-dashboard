@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, Field
@@ -290,10 +290,23 @@ class ForecastPoint(BaseModel):
     pv_w: float | None = None
 
 
+class WeatherDay(BaseModel):
+    day: date
+    weather_code: int
+    temperature_max_c: float
+    temperature_min_c: float
+    precipitation_probability_max_pct: float
+    precipitation_mm: float
+    wind_speed_max_kph: float
+    sunrise: datetime | None = None
+    sunset: datetime | None = None
+
+
 class ForecastRun(BaseModel):
     provider: str
     issued_at: datetime
     points: list[ForecastPoint]
+    weather_days: list[WeatherDay] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -328,6 +341,7 @@ class ForecastInsight(BaseModel):
     tomorrow_kwh: float | None = None
     calibration_days: int = 0
     points: list[ForecastPoint] = Field(default_factory=list)
+    weather_days: list[WeatherDay] = Field(default_factory=list)
 
 
 class ProjectionPoint(BaseModel):

@@ -815,6 +815,10 @@ class DashboardDatabase:
         return snapshot.today
 
     def store_forecast(self, run: ForecastRun) -> None:
+        metadata = {
+            **run.metadata,
+            "weather_days": [day.model_dump(mode="json") for day in run.weather_days],
+        }
         with self._lock:
             self._connection.execute(
                 """
@@ -830,7 +834,7 @@ class DashboardDatabase:
                         [point.model_dump(mode="json") for point in run.points],
                         separators=(",", ":"),
                     ),
-                    json.dumps(run.metadata, separators=(",", ":")),
+                    json.dumps(metadata, separators=(",", ":")),
                 ),
             )
             self._connection.execute(
@@ -846,11 +850,14 @@ class DashboardDatabase:
             ).fetchone()
         if not row:
             return None
+        metadata = json.loads(row["metadata_json"])
+        weather_days = metadata.pop("weather_days", [])
         return ForecastRun(
             provider=row["provider"],
             issued_at=datetime.fromisoformat(row["issued_at"]),
             points=json.loads(row["points_json"]),
-            metadata=json.loads(row["metadata_json"]),
+            weather_days=weather_days,
+            metadata=metadata,
         )
 
     def forecast_calibration_observations(

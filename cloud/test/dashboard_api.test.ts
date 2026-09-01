@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { D1Database, D1PreparedStatement, D1Result, R2Bucket } from '../src/cloudflare';
 import { handleDashboardApi } from '../src/dashboard_api';
 import type { WorkerEnv } from '../src/env';
@@ -94,6 +94,19 @@ describe('dashboard cloud API', () => {
           { timestamp: '2026-08-29T14:00', irradiance_w_m2: 700, pv_w: 2000 },
           { timestamp: '2026-08-30T13:00', irradiance_w_m2: 300, pv_w: 500 },
         ],
+        weather_days: [
+          {
+            day: '2026-08-29',
+            weather_code: 2,
+            temperature_max_c: 33.5,
+            temperature_min_c: 24,
+            precipitation_probability_max_pct: 20,
+            precipitation_mm: 0.4,
+            wind_speed_max_kph: 17,
+            sunrise: '2026-08-29T00:42:00.000Z',
+            sunset: '2026-08-29T13:31:00.000Z',
+          },
+        ],
       }),
     };
     const response = await handleDashboardApi(
@@ -109,6 +122,7 @@ describe('dashboard cloud API', () => {
         provider: string;
         today_kwh: number;
         tomorrow_kwh: number;
+        weather_days: Array<{ day: string; temperature_max_c: number }>;
       };
       live: {
         power_balance: string;
@@ -134,6 +148,9 @@ describe('dashboard cloud API', () => {
       today_kwh: 3,
       tomorrow_kwh: 0.5,
     });
+    expect(body.forecast.weather_days).toEqual([
+      expect.objectContaining({ day: '2026-08-29', temperature_max_c: 33.5 }),
+    ]);
     expect(body.live.energy_mix.grid_w).toBeGreaterThanOrEqual(0);
     expect(
       body.live.energy_mix.solar_w +
@@ -249,6 +266,57 @@ describe('dashboard cloud API', () => {
 });
 
 describe('scheduled retention', () => {
+  it('stores a seven-day weather outlook with the scheduled solar forecast', async () => {
+    const database = new Database();
+    const request = vi.fn(async (input: string | URL | Request) => {
+      void input;
+      return Response.json({
+        hourly: { time: ['2026-08-29T10:00'], shortwave_radiation: [500] },
+        daily: {
+          time: ['2026-08-29'],
+          weather_code: [2],
+          temperature_2m_max: [33.5],
+          temperature_2m_min: [24],
+          precipitation_probability_max: [20],
+          precipitation_sum: [0.4],
+          wind_speed_10m_max: [17],
+          sunrise: ['2026-08-29T05:42'],
+          sunset: ['2026-08-29T18:31'],
+        },
+      });
+    });
+    vi.stubGlobal('fetch', request);
+    const env = {
+      DB: database,
+      ARCHIVES: {} as R2Bucket,
+      DEVICE_ID: 'device',
+      R2_GUARD_BYTES: '9500000000',
+      SITE_LATITUDE: '1',
+      SITE_LONGITUDE: '1',
+      PV_ARRAY_KWP: '8',
+      REPORTING_TIME_ZONE: 'Asia/Karachi',
+    } as unknown as WorkerEnv;
+
+    await runScheduledMaintenance(env, now);
+
+    const forecastInsert = database.prepared.find((statement) =>
+      statement.query.includes('INSERT INTO forecasts'),
+    );
+    const payload = JSON.parse(String(forecastInsert?.values[2])) as {
+      weather_days: Array<{ day: string; temperature_max_c: number; sunrise: string }>;
+    };
+    expect(String(request.mock.calls[0]?.[0])).toContain('forecast_days=7');
+    expect(String(request.mock.calls[0]?.[0])).toContain('temperature_2m_max');
+    expect(payload.weather_days).toEqual([
+      expect.objectContaining({
+        day: '2026-08-29',
+        temperature_max_c: 33.5,
+        sunrise: '2026-08-29T00:42:00.000Z',
+      }),
+    ]);
+    vi.unstubAllGlobals();
+  });
+
   it('rolls up only a recent overlap of completed minutes before applying retention cutoffs', async () => {
     const database = new Database();
     const env = {

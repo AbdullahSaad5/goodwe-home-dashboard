@@ -325,6 +325,7 @@ export const demoCommandCenter: CommandCenterResponse = {
     tomorrow_kwh: null,
     calibration_days: 0,
     points: [],
+    weather_days: [],
   },
   projection: {
     status: 'unconfigured',

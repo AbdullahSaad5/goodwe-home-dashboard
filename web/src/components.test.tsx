@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import {
@@ -12,7 +12,12 @@ import {
   notificationAvailability,
   refreshCountdown,
 } from './App';
-import { OperatingCommandBar, PowerTrendsPanel, ProjectionPanel } from './CommandCenterComponents';
+import {
+  ForecastPanel,
+  OperatingCommandBar,
+  PowerTrendsPanel,
+  ProjectionPanel,
+} from './CommandCenterComponents';
 import {
   AnimatedReading,
   HistoryControls,
@@ -27,6 +32,36 @@ import { todayInTimeZone } from './period';
 import { ReportingTimeZoneProvider } from './reportingTimeZone';
 
 describe('dashboard interactions', () => {
+  it('shows daily weather while the solar estimate is still calibrating', () => {
+    const data = structuredClone(demoCommandCenter);
+    data.forecast.status = 'collecting';
+    data.forecast.reason =
+      'Seven valid days are required before showing calibrated solar estimates';
+    data.forecast.weather_days = [
+      {
+        day: '2026-08-29',
+        weather_code: 2,
+        temperature_max_c: 33.5,
+        temperature_min_c: 24,
+        precipitation_probability_max_pct: 20,
+        precipitation_mm: 0.4,
+        wind_speed_max_kph: 17,
+        sunrise: '2026-08-29T00:42:00.000Z',
+        sunset: '2026-08-29T13:31:00.000Z',
+      },
+    ];
+
+    render(<ForecastPanel data={data} onNavigate={vi.fn()} />);
+
+    const outlook = screen.getByRole('region', { name: 'Seven-day weather outlook' });
+    expect(within(outlook).getByText('Today')).toBeInTheDocument();
+    expect(within(outlook).getByText('Partly cloudy')).toBeInTheDocument();
+    expect(within(outlook).getByText('34° / 24°')).toBeInTheDocument();
+    expect(within(outlook).getByText('20% rain')).toBeInTheDocument();
+    expect(within(outlook).getByText('17 km/h')).toBeInTheDocument();
+    expect(screen.getByText(/Seven valid days are required/)).toBeInTheDocument();
+  });
+
   it('changes the selected chart period', async () => {
     const setPeriod = vi.fn();
     render(<PeriodControl period="day" setPeriod={setPeriod} />);

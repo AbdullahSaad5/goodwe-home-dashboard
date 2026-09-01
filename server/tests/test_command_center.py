@@ -1,11 +1,12 @@
 import json
 import sqlite3
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 
 import pytest
 from goodwe_home.analytics import CommandCenterAnalytics
 from goodwe_home.config import Settings
 from goodwe_home.database import DashboardDatabase
+from goodwe_home.models import ForecastPoint, ForecastRun, WeatherDay
 from goodwe_home.normalization import normalize_snapshot
 
 
@@ -112,6 +113,40 @@ def test_command_center_reports_configuration_readiness(tmp_path) -> None:
     assert response.projection.status == "unconfigured"
     assert response.live.battery_reserve.status == "unconfigured"
     assert response.readiness["outage_outlook"].status == "collecting"
+    database.close()
+
+
+def test_command_center_exposes_weather_while_solar_calibration_is_collecting(tmp_path) -> None:
+    database = DashboardDatabase(tmp_path / "dashboard.sqlite3", "Asia/Karachi")
+    now = datetime(2026, 8, 29, 5, tzinfo=UTC)
+    snapshot = normalize_snapshot(raw_sample(), collected_at=now)
+    database.record_snapshot(snapshot, raw_sample())
+    database.store_forecast(
+        ForecastRun(
+            provider="Open-Meteo",
+            issued_at=now,
+            points=[ForecastPoint(timestamp=now, irradiance_w_m2=500, pv_w=3200)],
+            weather_days=[
+                WeatherDay(
+                    day=date(2026, 8, 29),
+                    weather_code=2,
+                    temperature_max_c=33.5,
+                    temperature_min_c=24,
+                    precipitation_probability_max_pct=20,
+                    precipitation_mm=0.4,
+                    wind_speed_max_kph=17,
+                )
+            ],
+        )
+    )
+
+    response = CommandCenterAnalytics(
+        database,
+        Settings(site_latitude=1, site_longitude=1, pv_array_kwp=8),
+    ).build(snapshot, now=now)
+
+    assert response.forecast.status == "collecting"
+    assert response.forecast.weather_days[0].temperature_max_c == 33.5
     database.close()
 
 

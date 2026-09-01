@@ -397,12 +397,6 @@ class CommandCenterAnalytics:
                 status="unconfigured",
                 reason="Set SITE_LATITUDE and SITE_LONGITUDE to enable the opt-in forecast",
             )
-        if self.settings.pv_array_kwp is None:
-            return ForecastInsight(
-                status="unconfigured",
-                reason="Set PV_ARRAY_KWP before converting irradiance into expected production",
-                provider="Open-Meteo",
-            )
         run = self.database.latest_forecast()
         if run is None:
             last_error = self.database.get_runtime_setting("forecast_last_error")
@@ -415,6 +409,14 @@ class CommandCenterAnalytics:
                 ),
                 provider="Open-Meteo",
                 calibration_days=len(valid_days),
+            )
+        if self.settings.pv_array_kwp is None:
+            return ForecastInsight(
+                status="unconfigured",
+                reason="Set PV_ARRAY_KWP before converting irradiance into expected production",
+                provider=run.provider,
+                updated_at=run.issued_at,
+                weather_days=run.weather_days,
             )
         calibration = self.database.forecast_calibration_observations(now, valid_days)
         calibration_days = len(calibration)
@@ -440,6 +442,7 @@ class CommandCenterAnalytics:
                 provider=run.provider,
                 updated_at=run.issued_at,
                 calibration_days=calibration_days,
+                weather_days=run.weather_days,
             )
         calibrated_points = [
             point.model_copy(
@@ -475,6 +478,7 @@ class CommandCenterAnalytics:
             tomorrow_kwh=tomorrow_kwh,
             calibration_days=calibration_days,
             points=calibrated_points,
+            weather_days=run.weather_days,
         )
 
     def _projection(

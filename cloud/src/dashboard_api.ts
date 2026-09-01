@@ -43,6 +43,18 @@ interface ForecastPoint {
   pv_w: number | null;
 }
 
+interface WeatherDay {
+  day: string;
+  weather_code: number;
+  temperature_max_c: number;
+  temperature_min_c: number;
+  precipitation_probability_max_pct: number;
+  precipitation_mm: number;
+  wind_speed_max_kph: number;
+  sunrise: string | null;
+  sunset: string | null;
+}
+
 interface ForecastRow {
   provider: string;
   fetched_at: string;
@@ -347,9 +359,14 @@ function forecastResponse(
       tomorrow_kwh: null,
       calibration_days: 0,
       points: [],
+      weather_days: [],
     };
   }
-  const points = (JSON.parse(row.payload_json) as { points?: ForecastPoint[] }).points ?? [];
+  const payload = JSON.parse(row.payload_json) as {
+    points?: ForecastPoint[];
+    weather_days?: WeatherDay[];
+  };
+  const points = payload.points ?? [];
   const today = localDay(now, reportingTimezone);
   const tomorrowParts = shiftDate(parseDate(today), 1);
   const tomorrow = `${tomorrowParts.year}-${String(tomorrowParts.month).padStart(2, '0')}-${String(tomorrowParts.day).padStart(2, '0')}`;
@@ -376,6 +393,7 @@ function forecastResponse(
     tomorrow_kwh: energyForDay(tomorrow),
     calibration_days: 0,
     points,
+    weather_days: payload.weather_days ?? [],
   };
 }
 

@@ -4,8 +4,14 @@ import {
   BatteryCharging,
   BellRing,
   Clock3,
+  Cloud,
+  CloudFog,
+  CloudLightning,
+  CloudRain,
+  CloudSnow,
   CloudSun,
   Download,
+  Droplets,
   Gauge,
   Grid3X3,
   House,
@@ -14,6 +20,7 @@ import {
   Sun,
   Table2,
   ThermometerSun,
+  Wind,
   Zap,
 } from 'lucide-react';
 import { buttonVariants } from '@/components/ui/button';
@@ -49,6 +56,40 @@ function Readiness({ status, reason }: { status: string; reason: string }) {
       <p>{reason}</p>
     </div>
   );
+}
+
+function weatherCondition(code: number): string {
+  if (code === 0) return 'Clear sky';
+  if (code === 1) return 'Mainly clear';
+  if (code === 2) return 'Partly cloudy';
+  if (code === 3) return 'Overcast';
+  if (code === 45 || code === 48) return 'Fog';
+  if (code >= 51 && code <= 57) return 'Drizzle';
+  if ((code >= 61 && code <= 67) || (code >= 80 && code <= 82)) return 'Rain';
+  if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) return 'Snow';
+  if (code >= 95) return 'Thunderstorms';
+  return 'Variable weather';
+}
+
+function WeatherGlyph({ code }: { code: number }) {
+  if (code === 0) return <Sun />;
+  if (code === 1 || code === 2) return <CloudSun />;
+  if (code === 3) return <Cloud />;
+  if (code === 45 || code === 48) return <CloudFog />;
+  if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) return <CloudSnow />;
+  if (code >= 95) return <CloudLightning />;
+  return <CloudRain />;
+}
+
+function weatherDayLabel(day: string, index: number): string {
+  if (index === 0) return 'Today';
+  if (index === 1) return 'Tomorrow';
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(`${day}T12:00:00Z`));
 }
 
 export function OperatingCommandBar({ data }: { data: CommandCenterResponse }) {
@@ -445,31 +486,74 @@ export function ForecastPanel({
   data: CommandCenterResponse;
   onNavigate: (page: Page) => void;
 }) {
+  const weatherDays = data.forecast.weather_days ?? [];
   return (
     <Panel
-      title="Solar forecast"
+      title="Weather & solar forecast"
       eyebrow={data.forecast.provider ?? 'Opt-in weather data'}
       className="feature-panel"
     >
-      {data.forecast.status === 'ready' || data.forecast.status === 'stale' ? (
-        <div className="forecast-grid">
-          <article>
-            <span>Today</span>
-            <strong>{formatNumber(data.forecast.today_kwh)} kWh</strong>
-            <small>{data.forecast.reason}</small>
-          </article>
-          <article>
-            <span>Tomorrow</span>
-            <strong>{formatNumber(data.forecast.tomorrow_kwh)} kWh</strong>
-            <small>{data.forecast.calibration_days} calibration days</small>
-          </article>
-        </div>
+      {weatherDays.length ? (
+        <section className="weather-outlook" aria-label="Seven-day weather outlook">
+          <div className="weather-outlook-heading">
+            <div>
+              <strong>Upcoming weather</strong>
+              <span>Daily conditions at your solar site</span>
+            </div>
+            <small>{weatherDays.length}-day outlook</small>
+          </div>
+          <div className="weather-grid">
+            {weatherDays.map((day, index) => (
+              <article className={index === 0 ? 'today' : undefined} key={day.day}>
+                <span>{weatherDayLabel(day.day, index)}</span>
+                <div className="weather-condition-icon">
+                  <WeatherGlyph code={day.weather_code} />
+                </div>
+                <b>{weatherCondition(day.weather_code)}</b>
+                <strong>
+                  {formatNumber(day.temperature_max_c, 0)}° /{' '}
+                  {formatNumber(day.temperature_min_c, 0)}°
+                </strong>
+                <small>
+                  <Droplets /> {formatNumber(day.precipitation_probability_max_pct, 0)}% rain
+                </small>
+                <small>
+                  <Wind /> {formatNumber(day.wind_speed_max_kph, 0)} km/h
+                </small>
+              </article>
+            ))}
+          </div>
+        </section>
       ) : (
-        <Readiness status={data.forecast.status} reason={data.forecast.reason} />
+        <Readiness status="collecting" reason="Waiting for the first daily weather outlook" />
       )}
+      <div className="solar-forecast-section">
+        <div className="weather-outlook-heading">
+          <div>
+            <strong>Solar production estimate</strong>
+            <span>Calibrated against your system history</span>
+          </div>
+        </div>
+        {data.forecast.status === 'ready' || data.forecast.status === 'stale' ? (
+          <div className="forecast-grid">
+            <article>
+              <span>Today</span>
+              <strong>{formatNumber(data.forecast.today_kwh)} kWh</strong>
+              <small>{data.forecast.reason}</small>
+            </article>
+            <article>
+              <span>Tomorrow</span>
+              <strong>{formatNumber(data.forecast.tomorrow_kwh)} kWh</strong>
+              <small>{data.forecast.calibration_days} calibration days</small>
+            </article>
+          </div>
+        ) : (
+          <Readiness status={data.forecast.status} reason={data.forecast.reason} />
+        )}
+      </div>
       <p className="privacy-note">
-        <CloudSun /> Coordinates are sent to Open-Meteo only when forecasting is configured;
-        inverter telemetry remains local.
+        <CloudSun /> Coordinates are sent to Open-Meteo for site weather and solar forecasting;
+        inverter telemetry is never sent there.
       </p>
       <button type="button" className="event-footer" onClick={() => onNavigate('solar')}>
         Open Solar <Sun />

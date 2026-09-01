@@ -270,6 +270,17 @@ export interface CommandCenterResponse {
     tomorrow_kwh: number | null;
     calibration_days: number;
     points: Array<{ timestamp: string; irradiance_w_m2: number; pv_w: number | null }>;
+    weather_days: Array<{
+      day: string;
+      weather_code: number;
+      temperature_max_c: number;
+      temperature_min_c: number;
+      precipitation_probability_max_pct: number;
+      precipitation_mm: number;
+      wind_speed_max_kph: number;
+      sunrise: string | null;
+      sunset: string | null;
+    }>;
   };
   projection: {
     status: ReadinessStatus;

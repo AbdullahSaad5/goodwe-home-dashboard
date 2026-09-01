@@ -1,5 +1,58 @@
 import type { WorkerEnv } from './env';
 
+const dailyWeatherVariables = [
+  'weather_code',
+  'temperature_2m_max',
+  'temperature_2m_min',
+  'precipitation_probability_max',
+  'precipitation_sum',
+  'wind_speed_10m_max',
+  'sunrise',
+  'sunset',
+].join(',');
+
+function localTimeToIso(value: string, timezone: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(value);
+  if (!match) throw new Error(`Invalid Open-Meteo timestamp: ${value}`);
+  const target = Date.UTC(
+    Number(match[1]),
+    Number(match[2]) - 1,
+    Number(match[3]),
+    Number(match[4]),
+    Number(match[5]),
+    Number(match[6] ?? 0),
+  );
+  let candidate = target;
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  });
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const parts = Object.fromEntries(
+      formatter
+        .formatToParts(new Date(candidate))
+        .filter((part) => part.type !== 'literal')
+        .map((part) => [part.type, Number(part.value)]),
+    );
+    const represented = Date.UTC(
+      parts.year,
+      parts.month - 1,
+      parts.day,
+      parts.hour,
+      parts.minute,
+      parts.second,
+    );
+    candidate += target - represented;
+  }
+  return new Date(candidate).toISOString();
+}
+
 async function refreshForecast(env: WorkerEnv, now: Date): Promise<void> {
   if (!env.SITE_LATITUDE || !env.SITE_LONGITUDE) return;
   const previous = await env.DB.prepare(
@@ -8,12 +61,14 @@ async function refreshForecast(env: WorkerEnv, now: Date): Promise<void> {
   if (previous && now.valueOf() - Date.parse(previous.fetched_at) < 3 * 3_600_000) return;
   const tilted = env.PV_TILT_DEG !== undefined && env.PV_AZIMUTH_DEG !== undefined;
   const variable = tilted ? 'global_tilted_irradiance' : 'shortwave_radiation';
+  const timezone = env.REPORTING_TIME_ZONE ?? 'UTC';
   const query = new URLSearchParams({
     latitude: env.SITE_LATITUDE,
     longitude: env.SITE_LONGITUDE,
     hourly: variable,
-    forecast_days: '3',
-    timezone: 'UTC',
+    daily: dailyWeatherVariables,
+    forecast_days: '7',
+    timezone,
   });
   if (tilted) {
     query.set('tilt', env.PV_TILT_DEG!);
@@ -23,12 +78,13 @@ async function refreshForecast(env: WorkerEnv, now: Date): Promise<void> {
   if (!response.ok) throw new Error(`Open-Meteo returned ${response.status}`);
   const forecast = (await response.json()) as {
     hourly?: { time?: string[]; [key: string]: number[] | string[] | undefined };
+    daily?: { time?: string[]; [key: string]: number[] | string[] | undefined };
   };
   const times = forecast.hourly?.time ?? [];
   const radiation = (forecast.hourly?.[variable] as number[] | undefined) ?? [];
   const capacityWatts = env.PV_ARRAY_KWP ? Number(env.PV_ARRAY_KWP) * 1000 : null;
   const points = times.map((timestamp, index) => ({
-    timestamp,
+    timestamp: localTimeToIso(timestamp, timezone),
     irradiance_w_m2: radiation[index] ?? 0,
     pv_w:
       capacityWatts === null
@@ -38,12 +94,36 @@ async function refreshForecast(env: WorkerEnv, now: Date): Promise<void> {
             Math.min(capacityWatts, ((radiation[index] ?? 0) / 1000) * capacityWatts * 0.8),
           ),
   }));
+  const daily = forecast.daily;
+  const dailyNumber = (name: string, index: number): number => {
+    const value = (daily?.[name] as number[] | undefined)?.[index];
+    return Number.isFinite(value) ? Number(value) : 0;
+  };
+  const dailyTime = (name: string, index: number): string | null => {
+    const value = (daily?.[name] as string[] | undefined)?.[index];
+    return value ? localTimeToIso(value, timezone) : null;
+  };
+  const weatherDays = (daily?.time ?? []).map((day, index) => ({
+    day,
+    weather_code: dailyNumber('weather_code', index),
+    temperature_max_c: dailyNumber('temperature_2m_max', index),
+    temperature_min_c: dailyNumber('temperature_2m_min', index),
+    precipitation_probability_max_pct: dailyNumber('precipitation_probability_max', index),
+    precipitation_mm: dailyNumber('precipitation_sum', index),
+    wind_speed_max_kph: dailyNumber('wind_speed_10m_max', index),
+    sunrise: dailyTime('sunrise', index),
+    sunset: dailyTime('sunset', index),
+  }));
   await env.DB.prepare(
     `INSERT INTO forecasts (forecast_at_ms, provider, fetched_at, payload_json)
        VALUES (?1, 'Open-Meteo', ?2, ?3)
        ON CONFLICT(forecast_at_ms) DO UPDATE SET fetched_at = excluded.fetched_at, payload_json = excluded.payload_json`,
   )
-    .bind(now.valueOf(), now.toISOString(), JSON.stringify({ points, variable }))
+    .bind(
+      now.valueOf(),
+      now.toISOString(),
+      JSON.stringify({ points, weather_days: weatherDays, variable, timezone }),
+    )
     .run();
 }
 
