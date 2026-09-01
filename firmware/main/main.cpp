@@ -423,6 +423,7 @@ void write_batch(const std::vector<Poll>& polls) {
   }
   const auto compressed = compress_archive(gwr1::encode(archive));
   if (compressed.empty()) {
+    ESP_LOGE(tag, "Unable to compress a completed telemetry batch");
     record_dropped_range(polls.front().sequence, polls.back().sequence);
     return;
   }
@@ -434,6 +435,7 @@ void write_batch(const std::vector<Poll>& polls) {
   if (access(path, F_OK) == 0) return;
   FILE* file = std::fopen(temporary_path.c_str(), "wb");
   if (!file || std::fwrite(compressed.data(), 1, compressed.size(), file) != compressed.size()) {
+    ESP_LOGE(tag, "Unable to write a completed telemetry batch to LittleFS");
     if (file) std::fclose(file);
     std::remove(temporary_path.c_str());
     record_dropped_range(polls.front().sequence, polls.back().sequence);
@@ -442,11 +444,13 @@ void write_batch(const std::vector<Poll>& polls) {
   const bool synced = std::fflush(file) == 0 && fsync(fileno(file)) == 0;
   const bool closed = std::fclose(file) == 0;
   if (!synced || !closed) {
+    ESP_LOGE(tag, "Unable to durably synchronize a completed telemetry batch");
     std::remove(temporary_path.c_str());
     record_dropped_range(polls.front().sequence, polls.back().sequence);
     return;
   }
   if (std::rename(temporary_path.c_str(), path) != 0) {
+    ESP_LOGE(tag, "Unable to atomically finalize a completed telemetry batch");
     std::remove(temporary_path.c_str());
     record_dropped_range(polls.front().sequence, polls.back().sequence);
   } else {
@@ -458,11 +462,16 @@ void write_batch(const std::vector<Poll>& polls) {
 void archive_task(void*) {
   std::vector<Poll> batch;
   batch.reserve(batch_size);
+  ESP_LOGI(tag, "Telemetry archive task started");
   for (;;) {
     Poll* poll = nullptr;
     if (xQueueReceive(sample_queue, &poll, portMAX_DELAY) != pdTRUE || !poll) continue;
     batch.push_back(std::move(*poll));
     delete poll;
+    if (batch.size() == 1 || batch.size() == 10 || batch.size() == 20) {
+      ESP_LOGI(tag, "Telemetry archive batch progress: %u of %u samples",
+               static_cast<unsigned>(batch.size()), static_cast<unsigned>(batch_size));
+    }
     if (batch.size() == batch_size) {
       write_batch(batch);
       batch.clear();
