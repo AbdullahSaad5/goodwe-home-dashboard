@@ -95,9 +95,9 @@ async function refreshForecast(env: WorkerEnv, now: Date): Promise<void> {
           ),
   }));
   const daily = forecast.daily;
-  const dailyNumber = (name: string, index: number): number => {
+  const dailyNumber = (name: string, index: number): number | null => {
     const value = (daily?.[name] as number[] | undefined)?.[index];
-    return Number.isFinite(value) ? Number(value) : 0;
+    return Number.isFinite(value) ? Number(value) : null;
   };
   const dailyTime = (name: string, index: number): string | null => {
     const value = (daily?.[name] as string[] | undefined)?.[index];

@@ -130,6 +130,28 @@ def test_open_meteo_provider_returns_seven_day_weather(monkeypatch) -> None:
     assert run.weather_days[0].sunrise.isoformat() == "2026-08-29T05:42:00+05:00"
 
 
+def test_open_meteo_provider_preserves_missing_weather_as_unknown(monkeypatch) -> None:
+    monkeypatch.setattr(forecast_module.httpx, "AsyncClient", FakeAsyncClient)
+    monkeypatch.setattr(
+        FakeResponse,
+        "json",
+        lambda _: {
+            "hourly": {"time": ["2026-08-29T10:00"], "shortwave_radiation": [500]},
+            "daily": {"time": ["2026-08-29"]},
+        },
+    )
+    provider = OpenMeteoForecastProvider(
+        Settings(site_latitude=1, site_longitude=1, timezone="Asia/Karachi")
+    )
+
+    run = asyncio.run(provider.fetch(datetime(2026, 8, 29, 5, tzinfo=UTC)))
+
+    day = run.weather_days[0]
+    assert day.weather_code is None
+    assert day.temperature_max_c is None
+    assert day.precipitation_mm is None
+
+
 def test_forecast_coordinator_is_disabled_without_coordinates(tmp_path) -> None:
     settings = Settings(site_latitude=None, site_longitude=None)
     assert settings.forecast_configured is False

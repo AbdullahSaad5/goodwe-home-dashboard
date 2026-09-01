@@ -273,7 +273,7 @@ describe('scheduled retention', () => {
       return Response.json({
         hourly: { time: ['2026-08-29T10:00'], shortwave_radiation: [500] },
         daily: {
-          time: ['2026-08-29'],
+          time: ['2026-08-29', '2026-08-30'],
           weather_code: [2],
           temperature_2m_max: [33.5],
           temperature_2m_min: [24],
@@ -312,6 +312,12 @@ describe('scheduled retention', () => {
         day: '2026-08-29',
         temperature_max_c: 33.5,
         sunrise: '2026-08-29T00:42:00.000Z',
+      }),
+      expect.objectContaining({
+        day: '2026-08-30',
+        weather_code: null,
+        temperature_max_c: null,
+        precipitation_mm: null,
       }),
     ]);
     vi.unstubAllGlobals();

@@ -90,4 +90,35 @@ describe('dashboard refresh coordination', () => {
       expect(api.events).toHaveBeenCalledTimes(2);
     });
   });
+
+  it('carries updated weather through the complete live refresh boundary', async () => {
+    const refreshed = structuredClone(demoCommandCenter);
+    refreshed.forecast.weather_days = [
+      {
+        day: todayInTimeZone(),
+        weather_code: 2,
+        temperature_max_c: 33.5,
+        temperature_min_c: 24,
+        precipitation_probability_max_pct: 20,
+        precipitation_mm: 0.4,
+        wind_speed_max_kph: 17,
+        sunrise: '2026-08-29T00:42:00.000Z',
+        sunset: '2026-08-29T13:31:00.000Z',
+      },
+    ];
+    vi.mocked(api.commandCenter)
+      .mockResolvedValueOnce(demoCommandCenter)
+      .mockResolvedValue(refreshed);
+    const { result } = renderHook(() => useDashboard('day', todayInTimeZone(), '24h', '30d'));
+
+    await waitFor(() => expect(result.current.commandCenter).toEqual(demoCommandCenter));
+    act(() => FakeEventSource.instances[0].emitSnapshot(demoSnapshot));
+
+    await waitFor(() => {
+      expect(result.current.commandCenter?.forecast.weather_days[0]).toMatchObject({
+        weather_code: 2,
+        temperature_max_c: 33.5,
+      });
+    });
+  });
 });

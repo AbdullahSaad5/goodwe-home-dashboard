@@ -74,10 +74,10 @@ class OpenMeteoForecastProvider:
 
         daily = payload.get("daily", {})
 
-        def daily_value(name: str, index: int, default: float = 0) -> float:
+        def daily_value(name: str, index: int) -> float | None:
             values = daily.get(name, [])
-            value = values[index] if index < len(values) else default
-            return float(value if value is not None else default)
+            value = values[index] if index < len(values) else None
+            return float(value) if value is not None else None
 
         def local_timestamp(name: str, index: int) -> datetime | None:
             values = daily.get(name, [])
@@ -89,7 +89,9 @@ class OpenMeteoForecastProvider:
         weather_days = [
             WeatherDay(
                 day=date.fromisoformat(day),
-                weather_code=int(daily_value("weather_code", index)),
+                weather_code=(
+                    int(code) if (code := daily_value("weather_code", index)) is not None else None
+                ),
                 temperature_max_c=daily_value("temperature_2m_max", index),
                 temperature_min_c=daily_value("temperature_2m_min", index),
                 precipitation_probability_max_pct=daily_value(

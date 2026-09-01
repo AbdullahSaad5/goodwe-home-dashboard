@@ -27,7 +27,7 @@ _Privacy-safe preview with synthetic demo data; no inverter address, site detail
 - Monitor battery charge, health, temperature, power, limits, and cell balance
 - Inspect solar performance down to individual MPPT voltage, current, and power
 - Watch grid quality, household demand, backup load, outages, and utility exchange
-- Use optional weather-based solar forecasts, learned load profiles, and battery projections
+- See a seven-day site weather outlook alongside optional weather-based solar forecasts, learned load profiles, and battery projections
 - Review health alerts, inverter diagnostics, raw sensors, and local event history
 - Export historical data to CSV for deeper analysis
 - Enjoy a responsive interface with light, dark, and full-screen wall modes
@@ -132,7 +132,7 @@ By default, application data stays in `data/goodwe.sqlite3`, which is excluded f
 - One-minute aggregates are retained for one year.
 - Longer-term 15-minute and daily aggregates are retained indefinitely.
 - Daily records, timestamped peaks, and confirmed outage summaries are retained indefinitely.
-- Successful forecast runs are cached for 60 days; a failed refresh never interrupts collection.
+- Successful forecast runs include seven days of conditions, high/low temperature, rain chance, wind, sunrise, sunset, and solar irradiance. They are cached for 60 days; a failed refresh never interrupts collection.
 - The last working inverter address is saved in the same database.
 
 The first schema upgrade creates a one-time `*.pre-command-center.bak` SQLite backup before changing the database. Missing historical MPPT or temperature values remain null.

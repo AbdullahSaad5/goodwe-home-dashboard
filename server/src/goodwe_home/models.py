@@ -292,12 +292,12 @@ class ForecastPoint(BaseModel):
 
 class WeatherDay(BaseModel):
     day: date
-    weather_code: int
-    temperature_max_c: float
-    temperature_min_c: float
-    precipitation_probability_max_pct: float
-    precipitation_mm: float
-    wind_speed_max_kph: float
+    weather_code: int | None = None
+    temperature_max_c: float | None = None
+    temperature_min_c: float | None = None
+    precipitation_probability_max_pct: float | None = None
+    precipitation_mm: float | None = None
+    wind_speed_max_kph: float | None = None
     sunrise: datetime | None = None
     sunset: datetime | None = None
 

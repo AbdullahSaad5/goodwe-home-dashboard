@@ -45,12 +45,12 @@ interface ForecastPoint {
 
 interface WeatherDay {
   day: string;
-  weather_code: number;
-  temperature_max_c: number;
-  temperature_min_c: number;
-  precipitation_probability_max_pct: number;
-  precipitation_mm: number;
-  wind_speed_max_kph: number;
+  weather_code: number | null;
+  temperature_max_c: number | null;
+  temperature_min_c: number | null;
+  precipitation_probability_max_pct: number | null;
+  precipitation_mm: number | null;
+  wind_speed_max_kph: number | null;
   sunrise: string | null;
   sunset: string | null;
 }

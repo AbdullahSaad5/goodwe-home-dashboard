@@ -18,6 +18,8 @@ import {
   Maximize2,
   ShieldCheck,
   Sun,
+  Sunrise,
+  Sunset,
   Table2,
   ThermometerSun,
   Wind,
@@ -26,6 +28,7 @@ import {
 import { buttonVariants } from '@/components/ui/button';
 import { EnergyChart, Panel, ProjectionChart, StatCard } from './DashboardComponents';
 import { formatDateTime, formatNumber, formatPower, formatTime } from './format';
+import { shiftAnchor, todayInTimeZone } from './period';
 import { useReportingTimeZone } from './reportingTimeZone';
 import type {
   CommandCenterResponse,
@@ -58,32 +61,25 @@ function Readiness({ status, reason }: { status: string; reason: string }) {
   );
 }
 
-function weatherCondition(code: number): string {
-  if (code === 0) return 'Clear sky';
-  if (code === 1) return 'Mainly clear';
-  if (code === 2) return 'Partly cloudy';
-  if (code === 3) return 'Overcast';
-  if (code === 45 || code === 48) return 'Fog';
-  if (code >= 51 && code <= 57) return 'Drizzle';
-  if ((code >= 61 && code <= 67) || (code >= 80 && code <= 82)) return 'Rain';
-  if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) return 'Snow';
-  if (code >= 95) return 'Thunderstorms';
-  return 'Variable weather';
+function weatherDescriptor(code: number | null) {
+  if (code === null) return { label: 'Unavailable', Icon: Cloud };
+  if (code === 0) return { label: 'Clear sky', Icon: Sun };
+  if (code === 1) return { label: 'Mainly clear', Icon: CloudSun };
+  if (code === 2) return { label: 'Partly cloudy', Icon: CloudSun };
+  if (code === 3) return { label: 'Overcast', Icon: Cloud };
+  if (code === 45 || code === 48) return { label: 'Fog', Icon: CloudFog };
+  if (code >= 51 && code <= 57) return { label: 'Drizzle', Icon: CloudRain };
+  if ((code >= 61 && code <= 67) || (code >= 80 && code <= 82))
+    return { label: 'Rain', Icon: CloudRain };
+  if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86))
+    return { label: 'Snow', Icon: CloudSnow };
+  if (code >= 95) return { label: 'Thunderstorms', Icon: CloudLightning };
+  return { label: 'Variable weather', Icon: CloudRain };
 }
 
-function WeatherGlyph({ code }: { code: number }) {
-  if (code === 0) return <Sun />;
-  if (code === 1 || code === 2) return <CloudSun />;
-  if (code === 3) return <Cloud />;
-  if (code === 45 || code === 48) return <CloudFog />;
-  if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) return <CloudSnow />;
-  if (code >= 95) return <CloudLightning />;
-  return <CloudRain />;
-}
-
-function weatherDayLabel(day: string, index: number): string {
-  if (index === 0) return 'Today';
-  if (index === 1) return 'Tomorrow';
+function weatherDayLabel(day: string, today: string): string {
+  if (day === today) return 'Today';
+  if (day === shiftAnchor(today, 'day', 1)) return 'Tomorrow';
   return new Intl.DateTimeFormat(undefined, {
     weekday: 'short',
     month: 'short',
@@ -487,6 +483,8 @@ export function ForecastPanel({
   onNavigate: (page: Page) => void;
 }) {
   const weatherDays = data.forecast.weather_days ?? [];
+  const timeZone = useReportingTimeZone();
+  const today = todayInTimeZone(timeZone);
   return (
     <Panel
       title="Weather & solar forecast"
@@ -503,25 +501,36 @@ export function ForecastPanel({
             <small>{weatherDays.length}-day outlook</small>
           </div>
           <div className="weather-grid">
-            {weatherDays.map((day, index) => (
-              <article className={index === 0 ? 'today' : undefined} key={day.day}>
-                <span>{weatherDayLabel(day.day, index)}</span>
-                <div className="weather-condition-icon">
-                  <WeatherGlyph code={day.weather_code} />
-                </div>
-                <b>{weatherCondition(day.weather_code)}</b>
-                <strong>
-                  {formatNumber(day.temperature_max_c, 0)}° /{' '}
-                  {formatNumber(day.temperature_min_c, 0)}°
-                </strong>
-                <small>
-                  <Droplets /> {formatNumber(day.precipitation_probability_max_pct, 0)}% rain
-                </small>
-                <small>
-                  <Wind /> {formatNumber(day.wind_speed_max_kph, 0)} km/h
-                </small>
-              </article>
-            ))}
+            {weatherDays.map((day, index) => {
+              const weather = weatherDescriptor(day.weather_code);
+              const WeatherIcon = weather.Icon;
+              return (
+                <article className={index === 0 ? 'today' : undefined} key={day.day}>
+                  <span>{weatherDayLabel(day.day, today)}</span>
+                  <div className="weather-condition-icon">
+                    <WeatherIcon />
+                  </div>
+                  <b>{weather.label}</b>
+                  <strong>
+                    {formatNumber(day.temperature_max_c, 0)}° /{' '}
+                    {formatNumber(day.temperature_min_c, 0)}°
+                  </strong>
+                  <small>
+                    <Droplets /> {formatNumber(day.precipitation_probability_max_pct, 0)}% ·{' '}
+                    {formatNumber(day.precipitation_mm)} mm
+                  </small>
+                  <small>
+                    <Wind /> {formatNumber(day.wind_speed_max_kph, 0)} km/h
+                  </small>
+                  <small>
+                    <Sunrise /> {formatTime(day.sunrise, timeZone)}
+                  </small>
+                  <small>
+                    <Sunset /> {formatTime(day.sunset, timeZone)}
+                  </small>
+                </article>
+              );
+            })}
           </div>
         </section>
       ) : (

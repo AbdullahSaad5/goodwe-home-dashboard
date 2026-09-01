@@ -39,7 +39,7 @@ describe('dashboard interactions', () => {
       'Seven valid days are required before showing calibrated solar estimates';
     data.forecast.weather_days = [
       {
-        day: '2026-08-29',
+        day: todayInTimeZone(),
         weather_code: 2,
         temperature_max_c: 33.5,
         temperature_min_c: 24,
@@ -57,8 +57,10 @@ describe('dashboard interactions', () => {
     expect(within(outlook).getByText('Today')).toBeInTheDocument();
     expect(within(outlook).getByText('Partly cloudy')).toBeInTheDocument();
     expect(within(outlook).getByText('34° / 24°')).toBeInTheDocument();
-    expect(within(outlook).getByText('20% rain')).toBeInTheDocument();
+    expect(within(outlook).getByText(/20%.*0.4 mm/)).toBeInTheDocument();
     expect(within(outlook).getByText('17 km/h')).toBeInTheDocument();
+    expect(within(outlook).getByText(/5:42/)).toBeInTheDocument();
+    expect(within(outlook).getByText(/6:31/)).toBeInTheDocument();
     expect(screen.getByText(/Seven valid days are required/)).toBeInTheDocument();
   });
 

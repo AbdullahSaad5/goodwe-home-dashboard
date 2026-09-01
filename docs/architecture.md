@@ -88,7 +88,7 @@ An inline bootstrap in `web/index.html` resolves the saved appearance or the fir
 6. SQLite rollups and retention keep recent detail while preserving long-term summaries.
    Aggregate-backed reads replace the latest partial rollup bucket and append retained live samples, so charts do not pause until the next hourly rollup.
 7. Live grid observations pass through a 30-second outage debounce; missing polls are not interpreted as outages.
-8. When configured, the weather adapter refreshes independently every three hours and retains the last successful run.
+8. When configured, the weather adapter refreshes independently every three hours and retains the last successful seven-day weather and solar-irradiance run.
 9. `CommandCenterAnalytics` combines current state and retained facts into readiness-explicit API groups.
 10. The browser uses each snapshot broadcast to refresh all dependent read models together; a 60-second timer provides a fallback cycle.
 
