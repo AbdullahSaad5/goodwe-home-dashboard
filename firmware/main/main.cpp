@@ -41,12 +41,14 @@ namespace {
 
 constexpr char tag[] = "goodwe_collector";
 constexpr char archive_root[] = "/archive";
-constexpr std::size_t batch_size = 30;
+constexpr std::size_t archive_batch_size = 1;
+constexpr std::uint64_t sequence_reservation_size = 30;
 constexpr TickType_t poll_interval = pdMS_TO_TICKS(10'000);
 constexpr EventBits_t wifi_connected = BIT0;
 EventGroupHandle_t wifi_events;
 QueueHandle_t sample_queue;
 SemaphoreHandle_t inverter_mutex;
+TaskHandle_t upload_task_handle;
 
 struct Config {
   std::string ssid;
@@ -329,7 +331,7 @@ std::uint64_t allocate_sequence() {
     std::uint64_t stored = 0;
     nvs_get_u64(handle, "reserved_end", &stored);
     next = std::max(next, stored);
-    const auto end = next + batch_size;
+    const auto end = next + sequence_reservation_size;
     ESP_ERROR_CHECK(nvs_set_u64(handle, "reserved_end", end));
     ESP_ERROR_CHECK(nvs_commit(handle));
     nvs_close(handle);
@@ -394,15 +396,27 @@ void poll_task(void*) {
 }
 
 std::vector<std::uint8_t> compress_archive(const std::vector<std::uint8_t>& input) {
-  uLongf output_length = compressBound(input.size());
-  std::vector<std::uint8_t> output(output_length);
-  if (compress2(output.data(), &output_length, input.data(), input.size(), 1) != Z_OK) return {};
+  std::vector<std::uint8_t> output(compressBound(input.size()));
+  z_stream stream{};
+  constexpr int window_bits = 12;
+  constexpr int memory_level = 4;
+  if (deflateInit2(&stream, 1, Z_DEFLATED, window_bits, memory_level, Z_DEFAULT_STRATEGY) != Z_OK) {
+    return {};
+  }
+  stream.next_in = const_cast<Bytef*>(input.data());
+  stream.avail_in = static_cast<uInt>(input.size());
+  stream.next_out = output.data();
+  stream.avail_out = static_cast<uInt>(output.size());
+  const int result = deflate(&stream, Z_FINISH);
+  const auto output_length = stream.total_out;
+  deflateEnd(&stream);
+  if (result != Z_STREAM_END) return {};
   output.resize(output_length);
   return output;
 }
 
-void write_batch(const std::vector<Poll>& polls) {
-  if (polls.empty()) return;
+bool write_batch(const std::vector<Poll>& polls) {
+  if (polls.empty()) return false;
   gwr1::Archive archive;
   archive.device_id = config.device_id_bytes;
   archive.inverter_family = 1;
@@ -425,21 +439,21 @@ void write_batch(const std::vector<Poll>& polls) {
   if (compressed.empty()) {
     ESP_LOGE(tag, "Unable to compress a completed telemetry batch");
     record_dropped_range(polls.front().sequence, polls.back().sequence);
-    return;
+    return false;
   }
   char path[160];
   std::snprintf(path, sizeof(path), "%s/%020llu-%020llu.gwr.zlib", archive_root,
                 static_cast<unsigned long long>(polls.front().sequence),
                 static_cast<unsigned long long>(polls.back().sequence));
   const std::string temporary_path = std::string(path) + ".tmp";
-  if (access(path, F_OK) == 0) return;
+  if (access(path, F_OK) == 0) return true;
   FILE* file = std::fopen(temporary_path.c_str(), "wb");
   if (!file || std::fwrite(compressed.data(), 1, compressed.size(), file) != compressed.size()) {
     ESP_LOGE(tag, "Unable to write a completed telemetry batch to LittleFS");
     if (file) std::fclose(file);
     std::remove(temporary_path.c_str());
     record_dropped_range(polls.front().sequence, polls.back().sequence);
-    return;
+    return false;
   }
   const bool synced = std::fflush(file) == 0 && fsync(fileno(file)) == 0;
   const bool closed = std::fclose(file) == 0;
@@ -447,32 +461,31 @@ void write_batch(const std::vector<Poll>& polls) {
     ESP_LOGE(tag, "Unable to durably synchronize a completed telemetry batch");
     std::remove(temporary_path.c_str());
     record_dropped_range(polls.front().sequence, polls.back().sequence);
-    return;
+    return false;
   }
   if (std::rename(temporary_path.c_str(), path) != 0) {
     ESP_LOGE(tag, "Unable to atomically finalize a completed telemetry batch");
     std::remove(temporary_path.c_str());
     record_dropped_range(polls.front().sequence, polls.back().sequence);
+    return false;
   } else {
     ESP_LOGI(tag, "Archived a telemetry batch with %u samples",
              static_cast<unsigned>(polls.size()));
+    if (upload_task_handle) xTaskNotifyGive(upload_task_handle);
+    return true;
   }
 }
 
 void archive_task(void*) {
   std::vector<Poll> batch;
-  batch.reserve(batch_size);
+  batch.reserve(archive_batch_size);
   ESP_LOGI(tag, "Telemetry archive task started");
   for (;;) {
     Poll* poll = nullptr;
     if (xQueueReceive(sample_queue, &poll, portMAX_DELAY) != pdTRUE || !poll) continue;
     batch.push_back(std::move(*poll));
     delete poll;
-    if (batch.size() == 1 || batch.size() == 10 || batch.size() == 20) {
-      ESP_LOGI(tag, "Telemetry archive batch progress: %u of %u samples",
-               static_cast<unsigned>(batch.size()), static_cast<unsigned>(batch_size));
-    }
-    if (batch.size() == batch_size) {
+    if (batch.size() == archive_batch_size) {
       write_batch(batch);
       batch.clear();
     }
@@ -636,7 +649,7 @@ void upload_task(void*) {
     }
     if (failed) retry_delay_ms = std::min<std::uint32_t>(retry_delay_ms * 2, 900'000);
     const auto jitter_ms = esp_random() % 5'001;
-    vTaskDelay(pdMS_TO_TICKS(retry_delay_ms + jitter_ms));
+    ulTaskNotifyTake(pdTRUE, pdMS_TO_TICKS(retry_delay_ms + jitter_ms));
   }
 }
 
@@ -682,13 +695,13 @@ extern "C" void app_main() {
   ESP_ERROR_CHECK(xTaskCreate(discovery_task, "discovery", 6144, nullptr, 5, nullptr) == pdPASS
                       ? ESP_OK
                       : ESP_ERR_NO_MEM);
-  ESP_ERROR_CHECK(xTaskCreate(poll_task, "goodwe_poll", 8192, nullptr, 8, nullptr) == pdPASS
+  ESP_ERROR_CHECK(xTaskCreate(upload_task, "upload", 10'240, nullptr, 4, &upload_task_handle) == pdPASS
                       ? ESP_OK
                       : ESP_ERR_NO_MEM);
   ESP_ERROR_CHECK(xTaskCreate(archive_task, "archive", 10'240, nullptr, 6, nullptr) == pdPASS
                       ? ESP_OK
                       : ESP_ERR_NO_MEM);
-  ESP_ERROR_CHECK(xTaskCreate(upload_task, "upload", 10'240, nullptr, 4, nullptr) == pdPASS
+  ESP_ERROR_CHECK(xTaskCreate(poll_task, "goodwe_poll", 8192, nullptr, 8, nullptr) == pdPASS
                       ? ESP_OK
                       : ESP_ERR_NO_MEM);
 }
