@@ -127,7 +127,7 @@ function range(
   const resolution =
     period === 'day'
       ? start.valueOf() >= rawRetentionStart
-        ? '10s'
+        ? '1m'
         : '15m'
       : (period === 'week' || period === 'month') && start.valueOf() >= minuteRetentionStart
         ? '1m'

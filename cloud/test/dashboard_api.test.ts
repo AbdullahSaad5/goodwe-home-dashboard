@@ -203,6 +203,21 @@ describe('dashboard cloud API', () => {
     );
   });
 
+  it('uses one-minute aggregates for current day history to stay within D1 read limits', async () => {
+    const database = new Database();
+    const response = await handleDashboardApi(
+      new Request('https://dashboard.test/api/v1/history?period=day&anchor=2026-08-29'),
+      { deviceId: 'device', reportingTimezone: 'UTC', now: () => now },
+      database,
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ resolution: '1m' });
+    expect(database.prepared.some((statement) => statement.query.includes('aggregates_1m'))).toBe(
+      true,
+    );
+  });
+
   it('matches the desktop reporting-timezone bounds for an anchored day', async () => {
     const database = new Database();
     const response = await handleDashboardApi(

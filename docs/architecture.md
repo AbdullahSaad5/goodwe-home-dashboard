@@ -89,8 +89,9 @@ An inline bootstrap in `web/index.html` resolves the saved appearance or the fir
    Aggregate-backed reads replace the latest partial rollup bucket and append retained live samples, so charts do not pause until the next hourly rollup.
 7. Live grid observations pass through a 30-second outage debounce; missing polls are not interpreted as outages.
 8. When configured, the weather adapter refreshes independently every three hours and retains the last successful seven-day weather and solar-irradiance run.
-9. `CommandCenterAnalytics` combines current state and retained facts into readiness-explicit API groups.
-10. The browser uses each snapshot broadcast to refresh all dependent read models together; a 60-second timer provides a fallback cycle.
+9. The cloud dashboard serves day history from one-minute aggregates while `/status` remains a ten-second live view, keeping normal household browsing within D1's free row-read allowance.
+10. `CommandCenterAnalytics` combines current state and retained facts into readiness-explicit API groups.
+11. The browser uses each snapshot broadcast to refresh all dependent read models together; a 60-second timer provides a fallback cycle.
 
 ## Invariants
 
