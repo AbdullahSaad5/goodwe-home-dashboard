@@ -18,6 +18,7 @@
     "lint": "eslint web/src cloud/src cloud/test --max-warnings=0 && tsc -b && tsc -p cloud/tsconfig.json",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "migrate:history": "node scripts/migrate-local-history.mjs",
     "typecheck": "tsc -b && tsc -p cloud/tsconfig.json",
     "test": "vitest run && vitest run --config cloud/vitest.config.ts",
     "test:cloud": "vitest run --config cloud/vitest.config.ts",
