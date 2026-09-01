@@ -158,6 +158,7 @@ def main() -> None:
     }
     environment = idf_environment()
     idf_path = Path(environment["IDF_PATH"])
+    idf_command = idf_path / "tools/idf.py"
     generator = idf_path / "components/nvs_flash/nvs_partition_generator/nvs_partition_gen.py"
     python = Path(environment["IDF_PYTHON_ENV_PATH"]) / "bin/python"
     with tempfile.TemporaryDirectory(prefix="goodwe-provision-") as temporary:
@@ -174,7 +175,12 @@ def main() -> None:
         print(f"Prepared firmware for {PORT}; the verified original backup will not be modified.")
         if input('Type "FLASH" to replace the current firmware: ').strip() != "FLASH":
             raise SystemExit("Cancelled without writing the ESP32")
-        subprocess.run(["idf.py", "-p", PORT, "flash"], check=True, cwd=FIRMWARE, env=environment)
+        subprocess.run(
+            [str(python), str(idf_command), "-p", PORT, "flash"],
+            check=True,
+            cwd=FIRMWARE,
+            env=environment,
+        )
         subprocess.run(
             [
                 str(python),
