@@ -17,4 +17,9 @@ npm run build -- --mode lan --outDir dist-local
 STATIC_DIR="$PROJECT_DIR/web/dist-local"
 export STATIC_DIR
 
-exec .venv/bin/uvicorn goodwe_home.main:app --host 0.0.0.0 --port "${PORT:-8080}"
+set --
+if [ -f .env ]; then
+  set -- --env-file "$PROJECT_DIR/.env"
+fi
+
+exec .venv/bin/uvicorn goodwe_home.main:app --host 0.0.0.0 --port "${PORT:-8080}" "$@"
